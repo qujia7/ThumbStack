@@ -1,0 +1,51 @@
+# SPLIT TEST
+root_dir: output/
+# Variables that are global to all your stages
+# and their values
+globals:
+  savename: "all_bins"
+  random: False
+  catalogue: "full_catalog_Y3_test_swap.txt"
+
+gitcheck_pkgs:
+  - numpy
+  - scipy
+
+
+
+stages:
+
+  stage_profile:
+    script: test.py
+    exec: python
+    globals:
+      - savename
+      - random
+      - catalogue
+    parallel:
+      nproc: 75       # 15 nodes * 5 tasks per node
+      threads: 16     # 16 CPUs per task
+      walltime: 00:30:00
+
+  stage_bootstrap:
+    script: test_cov.py
+    exec: python
+    depends:
+      - stage_profile
+    globals:
+      - savename
+      - random
+      - catalogue
+    parallel:
+      nproc: 50       # 10 nodes * 5 tasks per node
+      threads: 16     # 16 CPUs per task
+      walltime: 00:20:00
+
+
+
+
+
+
+
+
+
