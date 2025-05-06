@@ -32,10 +32,10 @@ valid_filters = [
    'tauring',       # Ring filter for tau estimator
    'taudiskring'    # Disk-ring filter for tau estimator
 ]
+```
 
 
-
-Workflow
+## Workflow
 
 The pipeline operates in two main stages:
 
@@ -51,10 +51,10 @@ Performs bootstrap resampling
 Supports block bootstrap for spatially correlated data
 Computes velocity shuffling as a null test
 
-Usage
+### Usage
 Configuration
 The core settings are configured through mbatch.yaml:
-
+```python
 stages:
   stage_profile:
     # Compute stacked profiles
@@ -75,7 +75,8 @@ stages:
       nproc: 50       # 10 nodes * 5 tasks per node
       threads: 16     # 16 CPUs per task
       walltime: 00:20:00
+```
 
-Running the Pipeline
+### Running the Pipeline
 To run the complete pipeline:
    mbatch output_fname mbatch.yaml
