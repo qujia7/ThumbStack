@@ -26,11 +26,11 @@ class ThumbStack(object):
                                     [default: None]
    """
 
-   def __init__(self, U, Catalog, cmbMap, cmbMask, cmbHit=None, cmbMap2=None, name="test",
+   def __init__(self, U, Catalog, cmbMap, cmbMask, cmbHit=None, cmbMap2=None, cmbMask2=None, name="test",
                 nameLong=None, save=False, nProc=1, filterTypes='diskring',
                 estimatorTypes=['ksz_uniformweight'], equalSignedWeights=False, tLargeMin=None,
                 doStackedMap=False, doMBins=False, doVShuffle=False, doBootstrap=False, cmbNu=150.e9,
-                cmbUnitLatex=r'$\mu$K', workDir='.', test=False,block_bootstrap=False, runEndToEnd=True,nSamples=10000):
+                cmbUnitLatex=r'$\mu$K', workDir='.', test=False,block_bootstrap=False, runEndToEnd=True,nSamples=10000, applyCmbMask2=False):
     
       self.nProc = nProc
       self.save = save
@@ -44,6 +44,7 @@ class ThumbStack(object):
       self.cmbMap = cmbMap
       self.cmbMap2 = None
       self.cmbMask = cmbMask
+      self.cmbMask2 = cmbMask2
       self.cmbHit = cmbHit
       self.equalSignedWeights = equalSignedWeights
       self.tLargeMin = tLargeMin
@@ -54,6 +55,7 @@ class ThumbStack(object):
       self.cmbNu = cmbNu
       self.cmbUnitLatex = cmbUnitLatex
       self.block_bootstrap = block_bootstrap
+      self.applyCmbMask2=applyCmbMask2
 
       # aperture photometry filters to implement
       # can specify filterTypes as a single string or a list
@@ -254,7 +256,7 @@ class ThumbStack(object):
       #    print("comput stack profile this is the step i need to check")
 
       #this step computes the bootstrap and this takes a long time
-      self.saveAllStackedProfiles(test=test)
+      self.saveAllStackedProfiles(test=test, applyCmbMask2=self.applyCmbMask2)
 
       #print maybe do this as a separate step in clean script
       print("load all stacked profiles")
@@ -356,7 +358,7 @@ class ThumbStack(object):
       # interpolate the map to the given sky coordinates
       sourcecoord = np.array([dec, ra]) * utils.degree   # convert from degrees to radians
       # use nearest neighbor interpolation
-      return map.at(sourcecoord, prefilter=False, mask_nan=False, order=0)
+      return map.at(sourcecoord, order=0)
    
    
    
@@ -472,14 +474,14 @@ class ThumbStack(object):
 #      stampHit[:,:] = self.cmbHit.at(ipos, prefilter=False, mask_nan=False, order=0)
       
       # Here, I use bilinear interpolation
-      stampMap[:,:] = self.cmbMap.at(ipos, prefilter=True, mask_nan=False, order=1)
-      stampMask[:,:] = self.cmbMask.at(ipos, prefilter=True, mask_nan=False, order=1)
+      stampMap[:,:] = self.cmbMap.at(ipos, order=1)
+      stampMask[:,:] = self.cmbMask.at(ipos, order=1)
       if self.cmbMap2 is not None:
-         stampMap2[:,:] = self.cmbMap2.at(ipos, prefilter=True, mask_nan=False, order=1)
+         stampMap2[:,:] = self.cmbMap2.at(ipos, order=1)
       else:
          stampMap2 = None
       if self.cmbHit is not None:
-         stampHit[:,:] = self.cmbHit.at(ipos, prefilter=True, mask_nan=False, order=1)
+         stampHit[:,:] = self.cmbHit.at(ipos, order=1)
 
 #      # Here, I use bicubic spline interpolation
 #      stampMap[:,:] = self.cmbMap.at(ipos, prefilter=True, mask_nan=False, order=3)
@@ -497,19 +499,19 @@ class ThumbStack(object):
          print("- min, mean, max =", np.min(stampMap), np.mean(stampMap), np.max(stampMap))
          print("- plot")
          plots=enplot.plot(stampMap, grid=True)
-         enplot.write(self.pathTestFig+"/stampmap_ra"+np.str(np.round(ra, 2))+"_dec"+np.str(np.round(dec, 2)), plots)
+         enplot.write(self.pathTestFig+"/stampmap_ra"+str(np.round(ra, 2))+"_dec"+str(np.round(dec, 2)), plots)
 
          print("Mask:")
          print("- min, mean, max =", np.min(stampMask), np.mean(stampMask), np.max(stampMask))
          print("- plot")
          plots=enplot.plot(stampMask, grid=True)
-         enplot.write(self.pathTestFig+"/stampmask_ra"+np.str(np.round(ra, 2))+"_dec"+np.str(np.round(dec, 2)), plots)
+         enplot.write(self.pathTestFig+"/stampmask_ra"+str(np.round(ra, 2))+"_dec"+str(np.round(dec, 2)), plots)
 
          print("Hit count:")
          print("- min, mean, max =", np.min(stampHit), np.mean(stampHit), np.max(stampHit))
          print("- plot the hit")
          plots=enplot.plot(stampHit, grid=True)
-         enplot.write(self.pathTestFig+"/stamphit_ra"+np.str(np.round(ra, 2))+"_dec"+np.str(np.round(dec, 2)), plots)
+         enplot.write(self.pathTestFig+"/stamphit_ra"+str(np.round(ra, 2))+"_dec"+str(np.round(dec, 2)), plots)
 
       return opos, stampMap, stampMask, stampHit, stampMap2
 
@@ -687,7 +689,11 @@ class ThumbStack(object):
          vmax = np.max(np.abs(filterW))
          plots=enplot.plot(filterMap,grid=True, min=-vmax, max=vmax)#, color='hotcold')
          enplot.write(self.pathTestFig+"/stampfilter_r0"+floatExpForm(r0)+"_r1"+floatExpForm(r1), plots)
-
+      if test:
+        print(f"stampMask values: min={np.min(stampMask)}, max={np.max(stampMask)}")
+        print(f"Number of masked pixels in stamp: {np.sum(stampMask == 0)}")
+        print(f"Number of good pixels in stamp: {np.sum(stampMask == 1)}")
+        print(f"filtMask value: {filtMask}")
       return filtMap, filtMask, filtHitNoiseStdDev, filtArea
 
 
@@ -862,39 +868,55 @@ class ThumbStack(object):
 
 
    def catalogMask(self, overlap=False, psMask=True, mVir=None, z=[0., 100.], extraSelection=1.,
-                   filterType=None, outlierReject=True, test=False):
+                   filterType=None, outlierReject=True, test=False,applyCmbMask2=False):
       '''Returns catalog mask: 1 for objects to keep, 0 for objects to discard.
-      Use as:
-      maskedQuantity = Quantity[mask]
+      If applyCmbMask2 is True, applies an additional mask using cmbMask_2 to remove >5sigma outliers.
       '''
       print("generating mask")
       if mVir is None:
          mVir = [self.mMin, self.mMax]
       # Here mask is 1 for objects we want to keep
       mask = np.ones_like(self.Catalog.RA)
-      if test:
-          print("start with fraction", np.sum(mask)/len(mask), "of objects")
+      print("start with fraction", np.sum(mask)/len(mask), "of objects")
       if (self.Catalog.Mvir is not None):
          mask *= (self.Catalog.Mvir>=mVir[0]) * (self.Catalog.Mvir<=mVir[1])
          if test:
              print("keeping fraction", np.sum(mask)/len(mask), "of objects after mass cut")
       if (z is not None) and (self.Catalog.Z is not None):
          mask *= (self.Catalog.Z>=z[0]) * (self.Catalog.Z<=z[1])
-         if test:
-             print("keeping fraction", np.sum(mask)/len(mask), "of objects after further z cut")
+         print("keeping fraction", np.sum(mask)/len(mask), "of objects after further z cut")
       if overlap:
          mask *= self.overlapFlag.copy()
-         if test:
-             print("keeping fraction", np.sum(mask)/len(mask), "of objects after further overlap cut")
+         print("keeping fraction", np.sum(mask)/len(mask), "of objects after further overlap cut")
       # PS mask: look at largest aperture, and remove if any point within the disk or ring is masked
       if psMask:
          # The point source mask may vary from one filterType to another
          if filterType is None:
             filterType = list(self.filtMask.keys())[0]
+         # Add debugging
+         ps_mask_values = self.filtMask[filterType][:,-1]
          mask *= 1.*(np.abs(self.filtMask[filterType][:,-1])<1.)
-         if test:
-             print("keeping fraction", np.sum(mask)/len(mask), "of objects after PS mask")
+         
+         print("keeping fraction", np.sum(mask)/len(mask), "of objects after PS mask")
+      
+      # Apply additional CMB mask 2 if requested
+      print("applyCmbMask2 =", applyCmbMask2)
+
+      if applyCmbMask2 and hasattr(self, 'cmbMask2'):
+         print("Applying CMB mask 2 for outlier removal")
+         for iObj in range(len(self.Catalog.RA)):
+            if mask[iObj] == 1:  # Only check if not already masked
+               ra = self.Catalog.RA[iObj]
+               dec = self.Catalog.DEC[iObj]
+               hit2 = self.sky2map(ra, dec, self.cmbMask2)
+               if hit2 < 0.95:  # Same threshold as overlapFlag
+                  mask[iObj] = 0
+         print("keeping fraction", np.sum(mask)/len(mask), "of objects after CMB mask 2")
+      
       mask *= extraSelection
+      #print "keeping fraction", np.sum(mask)/len(mask), " of objects"
+      if outlierReject:
+         mask = mask.astype(bool)
       #print "keeping fraction", np.sum(mask)/len(mask), " of objects"
       if outlierReject:
          mask = mask.astype(bool)
@@ -921,12 +943,10 @@ class ThumbStack(object):
             newMask = (np.abs(self.filtMap[filterType][:,:]) <= nSigmasCut * sigmas[np.newaxis,:])
             # take the intersection of the masks
             mask *= np.prod(newMask, axis=1).astype(bool)
-            if test:
-                print("keeping fraction", np.sum(1.*mask)/len(mask), "of objects after further outlier cut")
+            print("keeping fraction", np.sum(1.*mask)/len(mask), "of objects after further outlier cut")
       # make sure the mask is boolean
       mask = mask.astype(bool)
-      if test:
-          print("keeping fraction", np.sum(1.*mask)/len(mask), "in the end")
+      print("keeping fraction", np.sum(1.*mask)/len(mask), "in the end")
       return mask
 
 
@@ -946,7 +966,7 @@ class ThumbStack(object):
                               # mVir=(self.Catalog.Mvir.min(), self.Catalog.Mvir.max()), this isn't a cut...
                               # outlierReject=False)
                               outlierReject=True)
-      # This array contains the true variances for each object and aperture 
+      # This array contains the true variances for each object and aperture
       filtVarTrue = np.zeros((self.Catalog.nObj, self.nRAp))
 
       if self.cmbHit is not None:
@@ -1115,7 +1135,7 @@ class ThumbStack(object):
 
    def computeStackedProfile(self, filterType, est, iBootstrap=None, iVShuffle=None, tTh='',
                              tLargeMin=None, stackedMap=False, mVir=None, z=[0., 100.], ts=None,
-                             mask=None, test=False,deg_bootstrap=2):
+                             mask=None, test=False,deg_bootstrap=2, applyCmbMask2=False):
       """Returns the estimated profile and its uncertainty for each aperture.
       est: string to select the estimator
       iBootstrap: index for bootstrap resampling
@@ -1131,7 +1151,7 @@ class ThumbStack(object):
 
       # select objects that overlap, and reject point sources
       if mask is None:
-         mask = ts.catalogMask(overlap=False, psMask=True, filterType=filterType, mVir=mVir, z=z, test=test)
+         mask = ts.catalogMask(overlap=False, psMask=True, filterType=filterType, mVir=mVir, z=z, test=test,applyCmbMask2=applyCmbMask2)
 
       #tStart = time()
       # just print it once
@@ -1961,7 +1981,7 @@ class ThumbStack(object):
    ##################################################################################
 
 
-   def saveAllStackedProfiles(self, theory=True, test=False):
+   def saveAllStackedProfiles(self, theory=True, test=False, applyCmbMask2=False):
       print("- compute all stacked profiles and their cov")
       tStart = time()
       data = np.zeros((self.nRAp, 3))
@@ -1978,7 +1998,7 @@ class ThumbStack(object):
          for est in self.Est:
             # measured stacked profile
             print("################################")
-            data[:,1], data[:,2] = self.computeStackedProfile(filterType, est, test=test) # [map unit * sr]
+            data[:,1], data[:,2] = self.computeStackedProfile(filterType, est, test=test, applyCmbMask2=applyCmbMask2) # [map unit * sr]
             np.savetxt(self.pathOut+"/"+filterType+"_"+est+"_measured.txt", data)
             # expected stacked profile from tSZ
             # BORRE TODA LA SIGUIENTE LINEA
