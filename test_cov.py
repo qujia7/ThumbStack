@@ -1,6 +1,6 @@
 from cosmoprimo.fiducial import DESI
 import sys
-sys.path.append('/home/r/rbond/jiaqu/Thumbstack_DESI/')
+sys.path.append('/home/jiaqu/Thumbstack_DESI/')
 import universe
 # reload(universe)
 from universe import *
@@ -40,20 +40,21 @@ parser.add_argument("--random", action='store_true',help='used random catalog')
 parser.add_argument("--savename",type=str,default=None)
 parser.add_argument("--catalogue",type=str,default="full_catalog_Y3_test_swap.txt")
 parser.add_argument("--output-dir", type=str,  default=None,help='Output directory.')
-
+parser.add_argument("--cmb",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits")
+parser.add_argument("--mask",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits")
 args = parser.parse_args()
 
 
-cmbMap = enmap.read_fits("/gpfs/fs0/project/r/rbond/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits")
-cmbMask = enmap.read_fits("/gpfs/fs0/project/r/rbond/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits")
+cmbMap = enmap.read_fits(args.cmb)
+cmbMask = enmap.read_fits(args.mask)
 
 mask_5sigma_1 = 1.*(cmbMap<5*np.std(cmbMap))
 mask_5sigma_2 = 1.*(cmbMap>-5*np.std(cmbMap))
 cmbMask_2 = cmbMask*mask_5sigma_1*mask_5sigma_2
 
 def run_analysis(nproc = 1, test=False,
-                 catpath = "/home/r/rbond/jiaqu/sims/DESI/catalogue/"):
-    outpath = '/home/r/rbond/jiaqu/sims/DESI/'
+                 catpath = "/scratch/jiaqu/desi/catalogue/"):
+    outpath = '/scratch/jiaqu/desi/'
     tsname=args.savename
     log_fn = outpath+'%s_args.log'
     u = DESI()

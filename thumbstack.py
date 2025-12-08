@@ -902,7 +902,7 @@ class ThumbStack(object):
       # Apply additional CMB mask 2 if requested
       print("applyCmbMask2 =", applyCmbMask2)
 
-      if applyCmbMask2 and hasattr(self, 'cmbMask2'):
+      if applyCmbMask2 and hasattr(self, 'cmbMask2') and self.cmbMask2 is not None:
          print("Applying CMB mask 2 for outlier removal")
          for iObj in range(len(self.Catalog.RA)):
             if mask[iObj] == 1:  # Only check if not already masked
@@ -912,6 +912,8 @@ class ThumbStack(object):
                if hit2 < 0.95:  # Same threshold as overlapFlag
                   mask[iObj] = 0
          print("keeping fraction", np.sum(mask)/len(mask), "of objects after CMB mask 2")
+      elif applyCmbMask2:
+         print("WARNING: applyCmbMask2=True but cmbMask2 is not available. Skipping CMB mask 2 application.")
       
       mask *= extraSelection
       #print "keeping fraction", np.sum(mask)/len(mask), " of objects"
@@ -948,6 +950,121 @@ class ThumbStack(object):
       mask = mask.astype(bool)
       print("keeping fraction", np.sum(1.*mask)/len(mask), "in the end")
       return mask
+
+
+   ##################################################################################
+
+   def saveFilteredCatalog(self, outputPath=None, filterType=None, mVir=None, z=[0., 100.], 
+                           overlap=False, psMask=True, outlierReject=True, applyCmbMask2=False):
+      """
+      Save the filtered catalog as a CSV file containing only the objects that pass all masks.
+      
+      Parameters:
+      -----------
+      outputPath : str, optional
+          Path where to save the filtered catalog. If None, saves to the thumbstack output directory.
+      filterType : str, optional
+          Filter type to use for masking. If None, uses the first available filter.
+      mVir : list, optional
+          Mass range [min, max] for filtering. If None, uses [self.mMin, self.mMax].
+      z : list, optional
+          Redshift range [min, max] for filtering. Default [0., 100.].
+      overlap : bool, optional
+          Whether to apply overlap mask. Default False.
+      psMask : bool, optional
+          Whether to apply point source mask. Default True.
+      outlierReject : bool, optional
+          Whether to apply outlier rejection. Default True.
+      applyCmbMask2 : bool, optional
+          Whether to apply additional CMB mask 2. Default False.
+      
+      Returns:
+      --------
+      str : Path to the saved filtered catalog file
+      """
+      import pandas as pd
+      
+      print("Saving filtered catalog...")
+      
+      # Get the mask for objects to keep
+      mask = self.catalogMask(overlap=overlap, psMask=psMask, mVir=mVir, z=z, 
+                              filterType=filterType, outlierReject=outlierReject, 
+                              test=False, applyCmbMask2=applyCmbMask2)
+      
+      # Create a dictionary with all available catalog data
+      catalog_data = {}
+      
+      # Always include basic coordinates and redshift
+      catalog_data['RA'] = self.Catalog.RA
+      catalog_data['DEC'] = self.Catalog.DEC
+      catalog_data['Z'] = self.Catalog.Z
+      catalog_data['vR'] = self.Catalog.vR
+      
+      # Include other properties if they exist
+      if hasattr(self.Catalog, 'Mvir') and self.Catalog.Mvir is not None:
+          catalog_data['Mvir'] = self.Catalog.Mvir
+      
+      if hasattr(self.Catalog, 'Mstellar') and self.Catalog.Mstellar is not None:
+          catalog_data['Mstellar'] = self.Catalog.Mstellar
+          
+      if hasattr(self.Catalog, 'coordX') and self.Catalog.coordX is not None:
+          catalog_data['coordX'] = self.Catalog.coordX
+          catalog_data['coordY'] = self.Catalog.coordY
+          catalog_data['coordZ'] = self.Catalog.coordZ
+          
+      if hasattr(self.Catalog, 'vX') and self.Catalog.vX is not None:
+          catalog_data['vX'] = self.Catalog.vX
+          catalog_data['vY'] = self.Catalog.vY
+          catalog_data['vZ'] = self.Catalog.vZ
+          
+      if hasattr(self.Catalog, 'vTheta') and self.Catalog.vTheta is not None:
+          catalog_data['vTheta'] = self.Catalog.vTheta
+          catalog_data['vPhi'] = self.Catalog.vPhi
+          
+      if hasattr(self.Catalog, 'integratedKSZ') and self.Catalog.integratedKSZ is not None:
+          catalog_data['integratedKSZ'] = self.Catalog.integratedKSZ
+          
+      if hasattr(self.Catalog, 'integratedY') and self.Catalog.integratedY is not None:
+          catalog_data['integratedY'] = self.Catalog.integratedY
+      
+      # Create DataFrame with all objects
+      df_full = pd.DataFrame(catalog_data)
+      
+      # Filter to keep only masked objects
+      df_filtered = df_full[mask].copy()
+      
+      # Add some metadata columns
+      df_filtered['object_index'] = df_full.index[mask]  # Original index in the full catalog
+      df_filtered['filter_passed'] = True
+      
+      # Determine output path
+      if outputPath is None:
+          # Create filename based on filtering parameters
+          filter_suffix = ""
+          if overlap:
+              filter_suffix += "_overlap"
+          if psMask:
+              filter_suffix += "_psmask"
+          if outlierReject:
+              filter_suffix += "_outlier"
+          if applyCmbMask2:
+              filter_suffix += "_cmbmask2"
+          if mVir is not None:
+              filter_suffix += f"_mvir{mVir[0]:.1e}-{mVir[1]:.1e}".replace("+", "")
+          if z != [0., 100.]:
+              filter_suffix += f"_z{z[0]:.1f}-{z[1]:.1f}"
+              
+          outputPath = f"{self.pathOut}/filtered_catalog{filter_suffix}.csv"
+      
+      # Save to CSV
+      df_filtered.to_csv(outputPath, index=False)
+      
+      print(f"Filtered catalog saved to: {outputPath}")
+      print(f"Original catalog size: {len(df_full)}")
+      print(f"Filtered catalog size: {len(df_filtered)}")
+      print(f"Fraction kept: {len(df_filtered)/len(df_full):.4f}")
+      
+      return outputPath
 
 
    ##################################################################################

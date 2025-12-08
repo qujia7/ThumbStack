@@ -3,9 +3,15 @@ root_dir: output/
 # Variables that are global to all your stages
 # and their values
 globals:
-  savename: "all_bins"
+  savename: "SGC_catalog_Y3_no_src_with_cluster_mask"
   random: False
-  catalogue: "full_catalog_Y3_test_swap.txt"
+  save-filtered-catalog: True
+  #catalogue: "full_catalog_Y3.txt"
+  catalogue: "SGC_catalog_Y3_no_src_with_cluster_mask.txt"
+  cmb: "/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits"
+  #mask: "/home/jiaqu/Thumbstack_DESI/wide_mask_GAL070_apod_1.50_deg_wExtended_srcfree_Will.fits"
+  #mask: "/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits"
+  mask: "/home/jiaqu/Thumbstack_DESI/output/wide_mask_GAL070_apod_1.50_deg_wExtended_no_src_with_cluster.fits"
 
 gitcheck_pkgs:
   - numpy
@@ -22,10 +28,13 @@ stages:
       - savename
       - random
       - catalogue
+      - cmb
+      - mask
+      - save-filtered-catalog
     parallel:
-      nproc: 75       # 15 nodes * 5 tasks per node
+      nproc: 120       # 15 nodes * 12 tasks per node
       threads: 16     # 16 CPUs per task
-      walltime: 00:30:00
+      walltime: 00:15:00
 
   stage_bootstrap:
     script: test_cov.py
@@ -37,9 +46,9 @@ stages:
       - random
       - catalogue
     parallel:
-      nproc: 50       # 10 nodes * 5 tasks per node
+      nproc: 480       # 30 nodes * 16 tasks per node
       threads: 16     # 16 CPUs per task
-      walltime: 00:20:00
+      walltime: 00:15:00
 
 
 

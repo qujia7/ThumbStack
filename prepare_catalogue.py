@@ -21,8 +21,6 @@ import pyclass
 # Importing catalogs
 
 main_directory = '//project/rrg-rbond-ac/jiaqu/DESI/catalogs/DA2/'
-# pre_rec_directory = 'analysis/loa-v1/LSScats/v1.1/BAO/unblinded/desipipe/2pt/recon_sm15_IFFT_recsym/'
-# post_rec_directory = "LSS/loa-v1/LSScats/v1.1/nonKP/"
 post_rec_directory = 'analysis/loa-v1/LSScats/v1.1/BAO/unblinded/desipipe/2pt/recon_sm15_IFFT_recsym/'
 pre_rec_directory = "LSS/loa-v1/LSScats/v1.1/nonKP/"
 
@@ -199,11 +197,15 @@ def create_redshift_bins(catalog_df, z_bins=None, name="catalog"):
 # Load CMB maps
 print("Loading CMB maps...")
 cmbMap = enmap.read_fits("/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits")
-cmbMask = enmap.read_fits("/home/jiaqu/Thumbstack_DESI/wide_mask_GAL070_apod_1.50_deg_wExtended_srcfree_Will.fits")
+#cmbMask = enmap.read_fits("/home/jiaqu/Thumbstack_DESI/wide_mask_GAL070_apod_1.50_deg_wExtended_srcfree_Will.fits")
+#cmbMask = enmap.read_fits("/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits")
+cmbMask = enmap.read_fits("/home/jiaqu/Thumbstack_DESI/output/wide_mask_GAL070_apod_1.50_deg_wExtended_no_src_with_cluster.fits")
 
 # Apply ACT overlap filtering to all catalogs
 print("\n=== Applying ACT Overlap Filtering ===")
 pre_rec_sort_ACT = apply_act_overlap_filter(pre_rec_sort, cmbMask, name="Full catalog")
+print("Total objects in full catalog after ACT filtering:")
+print(len(pre_rec_sort_ACT))
 pre_rec_NGC_sort_ACT = apply_act_overlap_filter(pre_rec_NGC_sort, cmbMask, name="NGC catalog") 
 pre_rec_SGC_sort_ACT = apply_act_overlap_filter(pre_rec_SGC_sort, cmbMask, name="SGC catalog")
 
@@ -220,10 +222,11 @@ sgc_zbins = create_redshift_bins(pre_rec_SGC_sort_ACT, name="SGC")
 
 # For backward compatibility, keep the original variable names
 df = pre_rec_sort_ACT
-df1 = full_zbins['full_zbin1_0.4_0.6']
-df2 = full_zbins['full_zbin2_0.6_0.8']
-df3 = full_zbins['full_zbin3_0.8_0.95']
-df4 = full_zbins['full_zbin4_0.95_1.1']
+print(full_zbins.keys())
+df1 = full_zbins['full_zbin1']
+df2 = full_zbins['full_zbin2']
+df3 = full_zbins['full_zbin3']
+df4 = full_zbins['full_zbin4']
 
 # Optional: Save all catalogs
 def save_catalogs(output_dir="/home/jiaqu/Thumbstack_DESI/output/catalogue/", save_format="txt"):
@@ -257,14 +260,14 @@ def save_catalogs(output_dir="/home/jiaqu/Thumbstack_DESI/output/catalogue/", sa
         if len(catalog) > 0:
             if save_format == "txt":
                 # Save in format compatible with ThumbStack (RA, DEC, Z, VEL_LOS_RENORM)
-                output_file = f"{output_dir}/{name}.txt"
+                output_file = f"{output_dir}/{name}_no_src_with_cluster_mask.txt"
                 # Use the same format as your original method
                 np.savetxt(output_file, np.array(catalog[["RA", "DEC", "Z", "VEL_LOS_RENORM"]]))
                 print(f"Saved {name}: {len(catalog)} objects -> {output_file}")
-            elif save_format == "csv":
-                output_file = f"{output_dir}/{name}.csv"
-                catalog.to_csv(output_file, index=False)
-                print(f"Saved {name}: {len(catalog)} objects -> {output_file}")
+            # elif save_format == "csv":
+            #     output_file = f"{output_dir}/{name}.csv"
+            #     catalog.to_csv(output_file, index=False)
+            #     print(f"Saved {name}: {len(catalog)} objects -> {output_file}")
         else:
             print(f"Skipping {name}: empty catalog")
 
