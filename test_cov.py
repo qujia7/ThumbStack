@@ -5,9 +5,7 @@ import universe
 # reload(universe)
 from universe import *
 
-import mass_conversion
 # reload(mass_conversion)
-from mass_conversion import *
 
 import catalog
 # reload(catalog)
@@ -20,6 +18,11 @@ from thumbstack import *
 import cmb
 # reload(cmb)
 from cmb import *
+
+import mass_conversion
+# reload(mass_conversion)
+from mass_conversion import *
+
 
 
 def map_function(pathMap):

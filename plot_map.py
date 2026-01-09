@@ -1,8 +1,19 @@
 from pixell import enmap, enplot
 import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
 import os
+import argparse
+
+# --- argument parsing ---
+parser = argparse.ArgumentParser(description="Plot enmap with customizable grid ticks")
+parser.add_argument("-t", "--ticks", type=str, default="1",
+                    help="The grid spacing in degrees. Either a single number to be used for both axes, or ty,tx.")
+parser.add_argument("--tick-unit", "--tu", type=str, default=None,
+                    help="Units for tick axis. Can be the unit size in degrees, or the word 'degree', 'arcmin' or 'arcsec' or the shorter 'd','m','s'.")
+parser.add_argument("--font-size", type=int, default=20,
+                    help="Font size for tick labels in pixels (default: 20)")
+parser.add_argument("-d", "--downgrade", type=int, default=4,
+                    help="Downgrade factor for resolution (default: 4, use 1 for full resolution)")
+args = parser.parse_args()
 
 # --- config ---
 infile  = "/scratch/jiaqu/desi/catalogue/zall_template_car_nosrc_sub_mask.fits"
@@ -10,9 +21,17 @@ outbase = "/scratch/jiaqu/test_ra0_decpm20"
 dec_min, dec_max = 0, 12.5     # degrees
 ra_center = 140.0              # degrees
 ra_width  = 40                 # degrees total width (RA 120-160)
-target_downgrade = 4
 
 # --- helpers ---
+def parse_tick_unit(tick_unit):
+    """Parse tick_unit argument into a value usable by enplot."""
+    if tick_unit is None:
+        return 1.0
+    try:
+        return float(tick_unit)
+    except ValueError:
+        return tick_unit
+
 def crop_ra_dec_band_wcs_safe(m, ra_center_deg, ra_width_deg, dec_min_deg, dec_max_deg):
     """Crop a CAR enmap to RA in [ra_center - ra_width/2, ra_center + ra_width/2] (with wrap)
        and Dec in [dec_min, dec_max], using the actual WCS (no assumptions)."""
@@ -51,54 +70,36 @@ m_crop = crop_ra_dec_band_wcs_safe(
     dec_min_deg=dec_min, dec_max_deg=dec_max
 )
 
-# Round colorbar range to nice value
-vmax_round = 0.002
+# Colorbar range (use nice round values)
+cbar_min = -0.002
+cbar_max = 0.0025
+
+# Parse ticks
+ticks_list = [float(x) for x in args.ticks.split(",")]
+if len(ticks_list) == 1:
+    tick_dec, tick_ra = ticks_list[0], ticks_list[0]
+else:
+    tick_dec, tick_ra = ticks_list[0], ticks_list[1]
+
+os.makedirs(os.path.dirname(outbase), exist_ok=True)
 
 # Use enplot with nice settings
-p = enplot.plot(
-    m_crop,
-    downgrade=target_downgrade,
+plot_kwargs = dict(
+    downgrade=args.downgrade,
     colorbar=True,
     color="planck",
     grid=True,
     grid_width=2,
-    ticks=10,
+    ticks=args.ticks,
+    font_size=args.font_size,
     mask=0,
-    range=f"{vmax_round}",
+    min=cbar_min,
+    max=cbar_max,
 )
+if args.tick_unit is not None:
+    plot_kwargs["tick_unit"] = parse_tick_unit(args.tick_unit)
 
-os.makedirs(os.path.dirname(outbase), exist_ok=True)
-
-# Write temporary enplot output
-temp_png = outbase + "_temp.png"
-enplot.write(temp_png.replace(".png", ""), p)
-
-# Load enplot image and add axis labels using matplotlib
-img = Image.open(temp_png)
-img_array = np.array(img)
-
-# Create matplotlib figure matching plot_no_vel.py style
-fig, ax = plt.subplots(figsize=(16, 6))
-
-# Display the enplot image
-# The enplot image has RA decreasing left-to-right (160 -> 120)
-ra_min = ra_center - ra_width / 2  # 120
-ra_max = ra_center + ra_width / 2  # 160
-ax.imshow(img_array, extent=[ra_max, ra_min, dec_min, dec_max], aspect='auto')
-
-# Add axis labels matching plot_no_vel.py
-ax.set_xlabel('RA [deg]')
-ax.set_ylabel('Dec [deg]')
-ax.set_xlim(ra_max, ra_min)  # RA increases to the left
-ax.set_ylim(dec_min, dec_max)
-
-# Save with matplotlib
-plt.savefig(f"{outbase}.png", dpi=300, bbox_inches='tight')
-plt.savefig(f"{outbase}.pdf", bbox_inches='tight')
-plt.close()
-
-# Clean up temporary file
-os.remove(temp_png)
-
+p = enplot.plot(m_crop, **plot_kwargs)
+enplot.write(outbase, p)
 print(f"Wrote {outbase}.png/.pdf   crop shape={m_crop.shape}")
-print(f"Color range: ±{vmax_round:.2e}")
+print(f"Color range: {cbar_min} to {cbar_max}")

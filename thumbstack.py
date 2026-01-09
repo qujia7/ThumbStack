@@ -569,6 +569,9 @@ class ThumbStack(object):
       # of point sources/edges
       filtMask = np.sum((radius<=r1) * (1-stampMask))   # [dimensionless]
 
+      #making this much less aggressive, only flag things within the inner radius
+      #filtMask = np.sum((radius<=r0) * (1-stampMask))   # [dimensionless]
+
       # disk filter [dimensionless]
       inDisk = 1.*(radius<=r0)
       # exact angular area of disk [sr]

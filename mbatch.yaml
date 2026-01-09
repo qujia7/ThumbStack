@@ -3,15 +3,15 @@ root_dir: output/
 # Variables that are global to all your stages
 # and their values
 globals:
-  savename: "SGC_catalog_Y3_no_src_with_cluster_mask"
+  savename: "f090nilc"
   random: False
   save-filtered-catalog: True
-  #catalogue: "full_catalog_Y3.txt"
-  catalogue: "SGC_catalog_Y3_no_src_with_cluster_mask.txt"
-  cmb: "/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits"
+  catalogue: "full_catalog_Y3_no_src_with_cluster_mask.txt"
+  cmb: "/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/ilc_fullRes_TT_smallScale_f090.fits"
   #mask: "/home/jiaqu/Thumbstack_DESI/wide_mask_GAL070_apod_1.50_deg_wExtended_srcfree_Will.fits"
   #mask: "/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits"
   mask: "/home/jiaqu/Thumbstack_DESI/output/wide_mask_GAL070_apod_1.50_deg_wExtended_no_src_with_cluster.fits"
+
 
 gitcheck_pkgs:
   - numpy

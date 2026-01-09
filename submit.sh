@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --nodes=15
-#SBATCH --time=00:30:00
-#SBATCH --ntasks-per-node=5
+#SBATCH --nodes=1
+#SBATCH --time=00:15:00
+#SBATCH --ntasks-per-node=1
 #SBATCH --output=/scratch/r/rbond/jiaqu/mpi_output_%j.txt
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=80
 #SBATCH --mail-user=jq247@cam.ac.uk
 #SBATCH --mail-type=ALL
 
@@ -18,6 +18,7 @@ module load gsl
 module load openmpi                                                                                             
 module load fftw                                                                                                
 module load python
+module load cfitsio/4.4.0 
 source /home/r/rbond/jiaqu/.bashrc
 
 
@@ -26,6 +27,4 @@ source /home/r/rbond/jiaqu/.bashrc
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 
-#srun --cpu-bind=cores python test.py --random --savename full_catalog_Y3_random
-
-srun --cpu-bind=cores python test_tsz.py --savename full_tsz_y3
+srun --cpu-bind=cores python /home/r/rbond/jiaqu/Thumbstack_DESI/get_spectra_master.py

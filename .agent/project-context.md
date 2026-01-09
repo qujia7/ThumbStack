@@ -78,7 +78,7 @@ source /home/jiaqu/.bashrc
 - Y1 vs Y3 consistency checks
 
 ### In Progress / Outstanding Items (from paper TODOs)
-- Figure 4: Check units for axes/colorbar, extend galaxy dot size, add legend
+- Figure 4: ~~Check units for axes/colorbar, extend galaxy dot size, add legend~~ **DONE** - Changed to scatter plot of individual galaxy positions (plot_no_vel.py); updated caption
 - Figure 5: Consider only plotting rho, x, beta given degeneracies; add HOD variation plot
 - Figure 7: Quote PTE for best-fit and Battaglia curves
 - Figure 9: Add null test for combined sample; null test from 90-150 or y-map
@@ -89,6 +89,7 @@ source /home/jiaqu/.bashrc
 - Table 2: Specify HOD source for marginalization
 - Section 4.2: Describe the HOD used and cite
 - Section 5.0.2: Clarify "wrt" in caption
+
 - Section 5.1.2: Make clear about imperfect consistency with photo-z
 - Conclusion: Check SNR scaling (sqrt(N) not N); rephrase future work positively
 
