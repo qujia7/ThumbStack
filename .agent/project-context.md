@@ -65,6 +65,7 @@ source /home/jiaqu/.bashrc
 - **Theory:** `theory_pred.py`, `theory_pred_new_hod.py`, `class_sz_ksz.py`
 - **GP emulator:** `gp_emulator.py` (for HOD marginalization)
 - **Catalog prep:** `prepare_catalogue.py`, `catalogue_merged.py`
+- **VTK export:** `export_vtk_visit.py` (export Y1/Y3 catalogs to VTK for VisIt visualization)
 
 ## Current Analysis Status
 
@@ -111,3 +112,80 @@ source /home/jiaqu/.bashrc
 - Fix GNFW gamma=-0.2, alpha=1 following Amodeo et al. 2021 / Battaglia 2016
 - Profile truncation: enforce enclosed gas mass = fb * m200c
 - Block bootstrap with 2x2 deg patches for spatial correlations
+
+---
+
+## Template Normalization Methods (Robustness Test)
+
+### Background
+Two methods exist for normalizing the kSZ velocity template. Both aim to construct:
+$$T_p = \frac{\sum_{i \in p} v_i / c}{\bar{n}_p}$$
+where $\bar{n}_p$ is the expected galaxy count in pixel $p$.
+
+### Method 1: Global nbar (Original — `prepare_templates.py`)
+
+**Implementation:**
+```python
+nbar_2D = N_gal_in_footprint / Omega_survey  # gal/sr, single global value
+T[p] = vsum[p] / (nbar_2D * Omega[p])
+```
+
+**Characteristics:**
+- Uses uniform density assumption across survey
+- Galaxy mask is binary (Heaviside): 1 if randoms exist in pixel, 0 otherwise
+- `nbar_2D × Omega[p]` = expected count per pixel (same everywhere except for pixel area variation)
+
+**Scripts:** `survey_mask.py` → `survey_mask_car.py` → `prepare_templates.py` → `namaste_car.py`
+
+### Method 2: Local nbar (Equation 8 — `prepare_templates_local_nbar.py`)
+
+**Implementation (based on pseudo-Cl literature, e.g., NaMaster):**
+$$\bar{n}_p = \alpha_r \times N_p^{\text{randoms}}, \quad \alpha_r = \frac{N_{\text{data}}}{N_{\text{randoms}}}$$
+
+```python
+# In survey_mask_local_nbar.py:
+alpha_r = N_data / N_randoms_total
+mask[p] = alpha_r * random_counts[p]
+
+# In prepare_templates_local_nbar.py:
+T[p] = vsum[p] / nbar_local[p]
+```
+
+**Characteristics:**
+- Uses random catalog to estimate local selection function
+- Accounts for survey depth/completeness variations
+- Pixels with fewer randoms get higher weight (1/nbar)
+
+**Scripts:** `survey_mask_local_nbar.py` → `prepare_templates_local_nbar.py` → `namaste_car_local_nbar.py`
+
+### Key Findings (2026-01-09)
+
+| Quantity | Method 1 (Global) | Method 2 (Local) |
+|----------|-------------------|------------------|
+| nbar mean | 2.87×10⁻² | 2.45×10⁻² |
+| 1/nbar mean | 34.86 | **55.23** |
+| Template std | 4.37×10⁻³ | 7.82×10⁻³ |
+| Cl amplitude | baseline | **~3× higher** |
+| fsky | 0.1203 | 0.1203 (identical) |
+
+**Critical Issue: Jensen's Inequality**
+$$\text{mean}(1/\bar{n}_p) \neq 1/\text{mean}(\bar{n}_p)$$
+
+- Local method: mean(1/nbar) = 55.23
+- Global method: 1/(nbar_2D×Ω) = 34.86
+- Ratio: 1.58 → Cl ratio ≈ 1.58² ≈ 2.5–3×
+
+The local method effectively **upweights sparse regions**, creating larger template variance and higher Cl amplitude, even though both methods use the same footprint (fsky identical).
+
+### Unresolved Questions
+
+1. **Normalization consistency:** Should local nbar be renormalized so mean(1/nbar_local) = 1/(nbar_2D×Ω)?
+2. **Theory interpretation:** Does the theory prediction need adjustment for local weighting?
+3. **Which is correct?** Literature (e.g., equation 8 from pseudo-Cl papers) suggests local, but amplitude difference needs explanation.
+
+### Catalog Requirements
+
+For Method 2, `survey_mask_local_nbar.py` requires:
+- **Catalog:** Full DESI footprint (no CMB mask), same z-cuts as analysis
+- **Current:** `/scratch/jiaqu/desi/catalogue/desi_lrg_full_footprint_z0.4_1.1.csv` (4,468,483 galaxies)
+- **Randoms:** `/project/rrg-rbond-ac/jiaqu/DESI/catalogs/DA2/LSS/loa-v1/LSScats/v1.1/nonKP/` (451M randoms)
