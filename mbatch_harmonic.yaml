@@ -1,0 +1,36 @@
+# SPLIT TEST
+root_dir: output/
+# Variables that are global to all your stages
+# and their values
+globals:
+  catalogue: "/scratch/jiaqu/desi/output/ngc_zbin1/filtered_catalog.csv"
+  use_random: True
+gitcheck_pkgs:
+  - numpy
+  - scipy
+
+
+
+stages:
+
+  stage_template:
+    script: prepare_templates.py
+    exec: python
+    globals:
+      - catalogue
+      - use_random
+    parallel:
+      nproc: 1       # 15 nodes * 12 tasks per node
+      walltime: 00:15:00
+
+  stage_spectra:
+    script: namaste_car.py
+    exec: python
+    depends:
+      - stage_template
+
+    parallel:
+      nproc: 1
+      walltime: 00:15:00
+
+  
