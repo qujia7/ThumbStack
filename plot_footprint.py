@@ -78,8 +78,10 @@ def create_full_footprint_map_custom_alpha(
     lon2d, lat2d = np.meshgrid(lon_1d, lat_1d)
 
     def hp_to_grid(hpmap):
-        theta = np.pi / 2 - lat2d          # colatitude
-        phi   = lon2d % (2 * np.pi)
+        theta = np.pi / 2 - lat2d
+        # Flip sign: healpy phi=0 is RA=0 at centre, RA increases to the LEFT
+        # matplotlib lon=0 is centre, lon increases to the RIGHT → phi = -lon
+        phi   = (-lon2d) % (2 * np.pi)
         pix   = hp.ang2pix(nside, theta.ravel(), phi.ravel())
         g = hpmap[pix].reshape(ny, nx).astype(float)
         # mask pixels outside the Mollweide ellipse
@@ -95,6 +97,25 @@ def create_full_footprint_map_custom_alpha(
         tmp[np.isnan(tmp)] = 0.0
         return gaussian_filter(tmp, sigma=SMOOTH)
 
+    def make_facecolors(grid, color, alpha):
+        """Per-cell RGBA array for pcolormesh (shape (ny-1)*(nx-1), 4)."""
+        s = smooth(grid)
+        filled = (s > 0.5) & ~np.isnan(grid)
+        rgba = np.zeros((*grid.shape, 4))
+        rgba[filled, 0] = color[0]
+        rgba[filled, 1] = color[1]
+        rgba[filled, 2] = color[2]
+        rgba[filled, 3] = alpha
+        # use upper-left corner of each cell (shading='flat')
+        return rgba[:-1, :-1].reshape(-1, 4)
+
+    def smooth_for_contour(g):
+        """Smooth and break continuity at the ±π boundary to kill wrap lines."""
+        s = smooth(g)
+        s[:, 0] = np.nan
+        s[:, -1] = np.nan
+        return s
+
     # ------------------------------------------------------------------
     # Plot
     # ------------------------------------------------------------------
@@ -102,21 +123,23 @@ def create_full_footprint_map_custom_alpha(
                            subplot_kw={'projection': 'mollweide'})
     ax.set_rasterization_zorder(0.5)
 
-    # filled regions
-    ax.contourf(lon2d, lat2d, smooth(grid_act),
-                levels=[0.5, 1.5], colors=[C_ACT],
-                alpha=alpha_act, zorder=0)
-    ax.contourf(lon2d, lat2d, smooth(grid_desi),
-                levels=[0.5, 1.5], colors=[C_DESI],
-                alpha=alpha_desi, zorder=0)
+    # filled regions via pcolormesh (no wrap-around artefacts)
+    for grid, color, alpha in [(grid_act, C_ACT, alpha_act),
+                                (grid_desi, C_DESI, alpha_desi)]:
+        pc = ax.pcolormesh(lon2d, lat2d,
+                           np.zeros((ny - 1, nx - 1)),
+                           shading='flat', zorder=0)
+        pc.set_facecolors(make_facecolors(grid, color, alpha))
+        pc.set_edgecolors('none')
 
-    # outlines
-    ax.contour(lon2d, lat2d, smooth(grid_act),
-               levels=[0.5], colors=[C_ACT],
-               linewidths=1.0, alpha=0.8, zorder=1)
-    ax.contour(lon2d, lat2d, smooth(grid_desi),
-               levels=[0.5], colors=[C_DESI],
-               linewidths=1.0, alpha=0.8, zorder=1)
+    # outlines — boundary columns set to NaN to prevent cross-map lines
+    for grid, color in [(grid_act, C_ACT), (grid_desi, C_DESI)]:
+        try:
+            ax.contour(lon2d, lat2d, smooth_for_contour(grid),
+                       levels=[0.5], colors=[color],
+                       linewidths=1.0, alpha=0.8, zorder=1)
+        except Exception:
+            pass
 
     ax.grid(True, alpha=0.3)
     ax.set_xlabel("RA [deg]", fontsize=12)
