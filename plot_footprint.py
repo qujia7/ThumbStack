@@ -144,19 +144,18 @@ def create_full_footprint_map_custom_alpha(
 # ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    import astropy.io.fits as fits
-    import pandas as pd
-
-    # Load catalogs (same paths used in LRG_Y3.ipynb)
-    cat_ngc = pd.read_csv('/scratch/jiaqu/desi/catalogue/NGC_catalog_Y3.csv')
-    cat_sgc = pd.read_csv('/scratch/jiaqu/desi/catalogue/SGC_catalog_Y3.csv')
+    # Columns: RA  Dec  Z  velocity_LOS
+    _NGC = np.loadtxt('/scratch/jiaqu/desi/catalogue/NGC_catalog_Y3.txt')
+    _SGC = np.loadtxt('/scratch/jiaqu/desi/catalogue/SGC_catalog_Y3.txt')
+    ra_ngc, dec_ngc = _NGC[:, 0], _NGC[:, 1]
+    ra_sgc, dec_sgc = _SGC[:, 0], _SGC[:, 1]
 
     act_mask = hp.read_map('/scratch/jiaqu/actxdesi33/masks/sz_mask_hp.fits')
     act_mask[act_mask != 0] = 1
 
     fig = create_full_footprint_map_custom_alpha(
-        cat_ngc['RA'], cat_ngc['DEC'],
-        cat_sgc['RA'], cat_sgc['DEC'],
+        ra_ngc, dec_ngc,
+        ra_sgc, dec_sgc,
         act_mask=act_mask,
         nside=256,
         alpha_act=0.35,
