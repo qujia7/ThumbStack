@@ -665,7 +665,7 @@ ax9.set_title(f'Error vs {gas_param_names[gas_param_idx]}')
 ax9.grid(True, alpha=0.3)
 
 plt.tight_layout()
-output_plot = f'/scratch/jiaqu/HOD/gp_emulator_2d_validation_z{z_eff:.3f}.png'
+output_plot = f'/scratch/jiaqu/HOD/gp_emulator_2d_validation_bin{args.bin}_z{z_eff:.3f}.png'
 plt.savefig(output_plot, dpi=150, bbox_inches='tight')
 print(f"Saved validation plot: {output_plot}")
 
@@ -702,7 +702,7 @@ emulator_data = {
     'training_time_minutes': total_time / 60
 }
 
-output_file = f'/scratch/jiaqu/HOD/gp_emulator_2d_z{z_eff:.3f}_.pkl'
+output_file = f'/scratch/jiaqu/HOD/gp_emulator_2d_bin{args.bin}_z{z_eff:.3f}.pkl'
 with open(output_file, 'wb') as f:
     pickle.dump(emulator_data, f)
 

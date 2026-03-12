@@ -22,9 +22,9 @@ from scipy.stats import qmc
 # Load emulators
 # ============================================================================
 emulator_paths = {
-    'bin1': '/scratch/jiaqu/HOD/gp_emulator_2d_z0.500_0.725.pkl',
-    'bin2': '/scratch/jiaqu/HOD/gp_emulator_2d_z0.725_.pkl',
-    'bin3': '/scratch/jiaqu/HOD/gp_emulator_2d_z0.950_.pkl',
+    'bin1': '/scratch/jiaqu/HOD/gp_emulator_2d_bin1_z0.500.pkl',
+    'bin2': '/scratch/jiaqu/HOD/gp_emulator_2d_bin2_z0.725.pkl',
+    'bin3': '/scratch/jiaqu/HOD/gp_emulator_2d_bin3_z0.950.pkl',
 }
 
 emulators = {}
