@@ -1,5 +1,5 @@
 """
-Validate GP emulators for bin1 and bin2: diagnose error vs ell.
+Validate GP emulators for bin1, bin2, and bin3: diagnose error vs ell.
 
 Uses analytical leave-one-out (LOO) cross-validation on the stored
 training data to compute actual prediction errors per ell bin, without
@@ -24,6 +24,7 @@ from scipy.stats import qmc
 emulator_paths = {
     'bin1': '/scratch/jiaqu/HOD/gp_emulator_2d_z0.500_0.725.pkl',
     'bin2': '/scratch/jiaqu/HOD/gp_emulator_2d_z0.725_.pkl',
+    'bin3': '/scratch/jiaqu/HOD/gp_emulator_2d_z0.950_.pkl',
 }
 
 emulators = {}
@@ -145,7 +146,7 @@ def compute_test_uncertainty(emulator_data):
 # Run diagnostics
 # ============================================================================
 results = {}
-for label in ['bin1', 'bin2']:
+for label in ['bin1', 'bin2', 'bin3']:
     print(f"\n{'='*60}")
     print(f"Processing {label}...")
     print(f"{'='*60}")
@@ -181,7 +182,7 @@ print("SUMMARY TABLE: LOO Median Relative Error")
 print("=" * 70)
 print(f"{'Bin':<8} {'All ell':<14} {'1000<ell<7000':<16} {'Outside':<14}")
 print("-" * 52)
-for label in ['bin1', 'bin2']:
+for label in ['bin1', 'bin2', 'bin3']:
     ell = results[label]['ell']
     err = results[label]['loo_errors']
     in_range = (ell >= 1000) & (ell <= 7000)
@@ -199,7 +200,7 @@ print("GP Predicted Uncertainty on Test Samples (median |std/pred|)")
 print("=" * 70)
 print(f"{'Bin':<8} {'All ell':<14} {'1000<ell<7000':<16} {'Outside':<14}")
 print("-" * 52)
-for label in ['bin1', 'bin2']:
+for label in ['bin1', 'bin2', 'bin3']:
     ell = results[label]['ell']
     unc = results[label]['test_unc']
     in_range = (ell >= 1000) & (ell <= 7000)
@@ -219,7 +220,7 @@ fig, axes = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
 
 # --- Panel 1: LOO cross-validation errors ---
 ax = axes[0]
-for label, color, marker in [('bin1', 'C0', 'o'), ('bin2', 'C1', 's')]:
+for label, color, marker in [('bin1', 'C0', 'o'), ('bin2', 'C1', 's'), ('bin3', 'C2', 'D')]:
     ell = results[label]['ell']
     err = results[label]['loo_errors']
     median_err = np.median(err, axis=0) * 100
@@ -248,7 +249,7 @@ ax.text(2500, ax.get_ylim()[1] * 0.92, 'fit range', ha='center',
 
 # --- Panel 2: GP predicted uncertainty on test samples ---
 ax = axes[1]
-for label, color, marker in [('bin1', 'C0', 'o'), ('bin2', 'C1', 's')]:
+for label, color, marker in [('bin1', 'C0', 'o'), ('bin2', 'C1', 's'), ('bin3', 'C2', 'D')]:
     ell = results[label]['ell']
     unc = results[label]['test_unc']
     median_unc = np.median(unc, axis=0) * 100
@@ -275,7 +276,7 @@ ax.text(2500, ax.get_ylim()[1] * 0.92, 'fit range', ha='center',
         fontsize=9, color='gray', style='italic')
 
 plt.tight_layout()
-outpath = 'figures/gp_emulator_validation_bin1_bin2.pdf'
+outpath = 'figures/gp_emulator_validation_bin1_bin2_bin3.pdf'
 plt.savefig(outpath, dpi=150, bbox_inches='tight')
 print(f"\nSaved plot: {outpath}")
 

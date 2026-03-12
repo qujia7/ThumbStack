@@ -5,19 +5,53 @@ from scipy.stats import qmc
 import matplotlib.pyplot as plt
 import pickle
 import os
+import argparse
 from classy_sz import Class
 from colossus.cosmology import cosmology
 from colossus.halo import mass_defs, concentration
 
 # ============================================================================
+# Bin selection via command line
+# ============================================================================
+parser = argparse.ArgumentParser(description='Train GP emulator for a given redshift bin')
+parser.add_argument('--bin', type=int, default=2, choices=[1, 2, 3],
+                    help='Redshift bin: 1 (z=0.500), 2 (z=0.725), 3 (z=0.950)')
+args = parser.parse_args()
+
+BIN_CONFIG = {
+    1: {
+        'z_eff': 0.500,
+        'chain_file': '/scratch/jiaqu/HOD/LRG/z0/v1.1/LRG_z0_all_chains.txt',
+        'dndz_file': '/home/jiaqu/Thumbstack_DESI/HOD/dndz_bin1_interpolated_new.txt',
+    },
+    2: {
+        'z_eff': 0.725,
+        'chain_file': '/scratch/jiaqu/HOD/LRG/z1/v1.1/LRG_z1_all_chains.txt',
+        'dndz_file': '/home/jiaqu/Thumbstack_DESI/HOD/dndz_bin2_interpolated_new.txt',
+    },
+    3: {
+        'z_eff': 0.950,
+        'chain_file': '/scratch/jiaqu/HOD/LRG/z2/v1.1/LRG_z2_all_chains.txt',
+        'dndz_file': '/home/jiaqu/Thumbstack_DESI/HOD/dndz_bin3_4_combined_interpolated_new.txt',
+    },
+}
+
+cfg = BIN_CONFIG[args.bin]
+z_eff = cfg['z_eff']
+chain_file = cfg['chain_file']
+dndz_file = cfg['dndz_file']
+
+print(f"Training GP emulator for bin{args.bin} (z_eff={z_eff})")
+print(f"  Chain file: {chain_file}")
+print(f"  dndz file:  {dndz_file}")
+
+# ============================================================================
 # Setup Colossus cosmology for mass conversions
 # ============================================================================
-params_cosmo = {'flat': True, 'H0': 67.66, 'Om0': 0.3111, 'Ob0': 0.049, 
+params_cosmo = {'flat': True, 'H0': 67.66, 'Om0': 0.3111, 'Ob0': 0.049,
                 'sigma8': 0.8102, 'ns': 0.9665}
 cosmology.addCosmology('myCosmo', params_cosmo)
 cosmology.setCosmology('myCosmo')
-
-z_eff =  0.725
 
 # ============================================================================
 # CLASS-SZ parameters
@@ -82,7 +116,6 @@ A_ALPHA_FIXED =0.88
 # ============================================================================
 # Load HOD chains and get bounds
 # ============================================================================
-chain_file = "/scratch/jiaqu/HOD/LRG/z1/v1.1/LRG_z1_all_chains.txt"
 z0, z1, z2 = [0.5, 0.725, 0.950]
 
 print(f"Reading chain file: {chain_file}")
@@ -177,12 +210,14 @@ gas_param_names = [
     'a_k2h'
 ]
 
-# Define gas parameter bounds based on your MCMC priors
+# Gas parameter bounds — tightened based on MCMC posteriors (1–99% CI
+# across all zbins) with ~0.5 dex margin.  Previous bounds wasted ~43%
+# of LHS samples in the zero-signal region (A_beta > 5, A_rho0 < 2).
 gas_bounds = np.array([
-    [0.8, 5.2],      # log10_A_rho0
-    [0.05, 1.05],      # xc_B16
-    [0.8, 8.0],      # A_beta
-    [0.0, 5.0]       # a_k2h
+    [2.0, 4.5],      # log10_A_rho0  (was [0.8, 5.2])
+    [0.05, 1.05],    # xc_B16        (unchanged)
+    [1.5, 5.5],      # A_beta        (was [0.8, 8.0])
+    [0.0, 4.5]       # a_k2h         (was [0.0, 5.0])
 ])
 
 print("\nGas Parameter Bounds:")
@@ -254,7 +289,7 @@ def run_class_sz_combined(combined_params, verbose=False):
         'M0_HOD': 10**log_Mmin * kappa,
         'x_out_truncated_nfw_profile_satellite_galaxies': 1.0,
         'f_cen_HOD': alpha_c,
-        'UNWISE_dndz_file': "/home/jiaqu/Thumbstack_DESI/HOD/dndz_bin2_interpolated_new.txt"
+        'UNWISE_dndz_file': dndz_file
     }
     
     # Build gas parameters dictionary with FIXED A_alpha
