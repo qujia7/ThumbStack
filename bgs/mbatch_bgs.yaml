@@ -16,7 +16,7 @@ gitcheck_pkgs:
 stages:
 
   stage_profile:
-    script: test.py
+    script: ../test.py
     exec: python
     globals:
       - savename
@@ -32,7 +32,7 @@ stages:
       walltime: 00:15:00
 
   stage_bootstrap:
-    script: test_cov.py
+    script: ../test_cov.py
     exec: python
     depends:
       - stage_profile
