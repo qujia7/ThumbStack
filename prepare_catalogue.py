@@ -1,21 +1,8 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from cosmoprimo.fiducial import DESI # tienes que tener el environment de cosmodesi
+from cosmoprimo.fiducial import DESI
 from astropy.table import Table
-from joblib import Parallel, delayed
-from tqdm import tqdm
-import time
 from pixell import enmap
-import copy
-import matplotlib
-from scipy import special, optimize, integrate, stats
-# import classy module
-from classy import Class
-from scipy import integrate
-from cosmoprimo.fiducial import DESI # tienes que tener el environment de cosmodesi
-import pandas as pd
-import pyclass
 
 
 # Importing catalogs
@@ -196,9 +183,6 @@ def create_redshift_bins(catalog_df, z_bins=None, name="catalog"):
 
 # Load CMB maps
 print("Loading CMB maps...")
-cmbMap = enmap.read_fits("/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits")
-#cmbMask = enmap.read_fits("/home/jiaqu/Thumbstack_DESI/wide_mask_GAL070_apod_1.50_deg_wExtended_srcfree_Will.fits")
-#cmbMask = enmap.read_fits("/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits")
 cmbMask = enmap.read_fits("/home/jiaqu/Thumbstack_DESI/output/wide_mask_GAL070_apod_1.50_deg_wExtended_no_src_with_cluster.fits")
 
 # Apply ACT overlap filtering to all catalogs
@@ -264,10 +248,6 @@ def save_catalogs(output_dir="/home/jiaqu/Thumbstack_DESI/output/catalogue/", sa
                 # Use the same format as your original method
                 np.savetxt(output_file, np.array(catalog[["RA", "DEC", "Z", "VEL_LOS_RENORM"]]))
                 print(f"Saved {name}: {len(catalog)} objects -> {output_file}")
-            # elif save_format == "csv":
-            #     output_file = f"{output_dir}/{name}.csv"
-            #     catalog.to_csv(output_file, index=False)
-            #     print(f"Saved {name}: {len(catalog)} objects -> {output_file}")
         else:
             print(f"Skipping {name}: empty catalog")
 
