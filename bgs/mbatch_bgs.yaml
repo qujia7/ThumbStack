@@ -1,4 +1,4 @@
-root_dir: output/
+root_dir: /scratch/jiaqu/desi/bgs/output/
 
 globals:
   savename: "bgs_bright_full"
