@@ -7,9 +7,11 @@ from pixell import enmap
 
 # Importing catalogs
 
-main_directory = '//project/rrg-rbond-ac/jiaqu/DESI/catalogs/DA2/'
+main_directory     = '/project/rrg-rbond-ac/jiaqu/DESI/catalogs/DA2/'
 post_rec_directory = 'analysis/loa-v1/LSScats/v1.1/BAO/unblinded/desipipe/2pt/recon_sm15_IFFT_recsym/'
-pre_rec_directory = "LSS/loa-v1/LSScats/v1.1/nonKP/"
+pre_rec_directory  = 'LSS/loa-v1/LSScats/v1.1/nonKP/'
+mask_path          = '/home/jiaqu/Thumbstack_DESI/output/wide_mask_GAL070_apod_1.50_deg_wExtended_no_src_with_cluster.fits'
+output_dir         = '/home/jiaqu/Thumbstack_DESI/output/catalogue/'
 
 
 # North Galactic Cap:
@@ -183,7 +185,7 @@ def create_redshift_bins(catalog_df, z_bins=None, name="catalog"):
 
 # Load CMB maps
 print("Loading CMB maps...")
-cmbMask = enmap.read_fits("/home/jiaqu/Thumbstack_DESI/output/wide_mask_GAL070_apod_1.50_deg_wExtended_no_src_with_cluster.fits")
+cmbMask = enmap.read_fits(mask_path)
 
 # Apply ACT overlap filtering to all catalogs
 print("\n=== Applying ACT Overlap Filtering ===")
@@ -213,7 +215,7 @@ df3 = full_zbins['full_zbin3']
 df4 = full_zbins['full_zbin4']
 
 # Optional: Save all catalogs
-def save_catalogs(output_dir="/home/jiaqu/Thumbstack_DESI/output/catalogue/", save_format="txt"):
+def save_catalogs(output_dir=output_dir, save_format="txt"):
     """
     Save all processed catalogs to files
     
