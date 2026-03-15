@@ -1,0 +1,47 @@
+root_dir: output/
+
+globals:
+  savename: "bgs_bright_full"
+  random: False
+  save-filtered-catalog: False
+  catalogue: "BGS_BRIGHT-20.2_full_no_src_with_cluster_mask.txt"
+  cmb: "/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits"
+  mask: "/home/jiaqu/Thumbstack_DESI/output/wide_mask_GAL070_apod_1.50_deg_wExtended_no_src_with_cluster.fits"
+  rV: 0.64
+
+gitcheck_pkgs:
+  - numpy
+  - scipy
+
+stages:
+
+  stage_profile:
+    script: test.py
+    exec: python
+    globals:
+      - savename
+      - random
+      - catalogue
+      - cmb
+      - mask
+      - save-filtered-catalog
+      - rV
+    parallel:
+      nproc: 120
+      threads: 16
+      walltime: 00:15:00
+
+  stage_bootstrap:
+    script: test_cov.py
+    exec: python
+    depends:
+      - stage_profile
+    globals:
+      - savename
+      - random
+      - catalogue
+      - rV
+    parallel:
+      nproc: 480
+      threads: 16
+      walltime: 00:15:00

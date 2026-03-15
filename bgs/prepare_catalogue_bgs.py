@@ -7,7 +7,7 @@ import os
 # Paths
 catalog_path = '/project/rrg-rbond-ac/jiaqu/DESI/catalogs/BGS/recon/catalog_BGS_BRIGHT-20.2_R12.50_nmesh512_recsym_MG_masked.fits'
 mask_path    = '/home/jiaqu/Thumbstack_DESI/output/wide_mask_GAL070_apod_1.50_deg_wExtended_no_src_with_cluster.fits'
-output_dir   = '/home/jiaqu/Thumbstack_DESI/bgs/output/catalogue/'
+output_dir   = '/scratch/jiaqu/desi/catalogue/'
 
 logm_thresholds = [None, 9.5, 10.0, 10.5, 11.0]  # None = full sample, no cut
 
