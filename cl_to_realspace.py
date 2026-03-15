@@ -584,12 +584,44 @@ def main():
         columns.extend([FT_theory_at_theta, FT_theory_fitted])
         header_parts.extend(["FT_theory_uK_arcmin2", f"FT_theory_fitted(A={A_best:.3f})_uK_arcmin2"])
 
-        # Add stacking data
-        columns.append(data_out)
-        header_parts.append("data_stacking_uK_arcmin2")
+        # Add stacking data and errors
+        if has_data:
+            data_err_out = yerr_data
+        else:
+            data_err_out = np.full_like(theta_out, np.nan)
+
+        columns.extend([data_out, data_err_out])
+        header_parts.extend(["data_stacking_uK_arcmin2", "data_stacking_err_uK_arcmin2"])
+
+        # Compute chi-squared test if both measured FT and stacking data available
+        chi2_info = ""
+        if has_measured and has_data:
+            # Chi-squared: (FT_meas - stack_data)^2 / FT_meas_err^2
+            residual = FT_meas_mean - data_out
+            chi2_meas_vs_stack = np.sum(residual**2 / FT_meas_err**2)
+            dof_consistency = len(theta_out)
+            chi2_dof = chi2_meas_vs_stack / dof_consistency
+            from scipy.stats import chi2 as chi2_dist
+            pte_consistency = 1 - chi2_dist.cdf(chi2_meas_vs_stack, dof_consistency)
+
+            chi2_info = (f"\n# Chi-squared test: Measured FT (harmonic) vs Stacking Data (real-space)\n"
+                        f"# chi2 = {chi2_meas_vs_stack:.2f}, dof = {dof_consistency}, "
+                        f"chi2/dof = {chi2_dof:.2f}, PTE = {pte_consistency:.4f}")
+
+            print(f"\n{'='*60}")
+            print("Harmonic ↔ Real Space Consistency Test:")
+            print(f"  Measured FT vs Stacking Data")
+            print(f"  χ² = {chi2_meas_vs_stack:.2f} (dof = {dof_consistency})")
+            print(f"  χ²/dof = {chi2_dof:.2f}")
+            print(f"  PTE = {pte_consistency:.4f}")
+            if pte_consistency > 0.05:
+                print("  ✓ Methods are consistent (PTE > 0.05)")
+            else:
+                print("  ✗ Potential tension between methods (PTE < 0.05)")
+            print(f"{'='*60}")
 
         output_data = np.column_stack(columns)
-        header = "  ".join(header_parts)
+        header = "  ".join(header_parts) + chi2_info
         np.savetxt(args.output, output_data, header=header, fmt='%.6e')
         print(f"\nSaved to: {args.output}")
 

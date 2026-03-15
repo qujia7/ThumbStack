@@ -1,26 +1,28 @@
-from pixell import enmap, enplot
+from pixell import enmap, enplot, utils
 import numpy as np
+import pandas as pd
 import os
 import argparse
-
+#python3 plot_map.py --ticks 5 --downgrade 7
 # --- argument parsing ---
 parser = argparse.ArgumentParser(description="Plot enmap with customizable grid ticks")
-parser.add_argument("-t", "--ticks", type=str, default="1",
+parser.add_argument("-t", "--ticks", type=str, default="5",
                     help="The grid spacing in degrees. Either a single number to be used for both axes, or ty,tx.")
 parser.add_argument("--tick-unit", "--tu", type=str, default=None,
                     help="Units for tick axis. Can be the unit size in degrees, or the word 'degree', 'arcmin' or 'arcsec' or the shorter 'd','m','s'.")
 parser.add_argument("--font-size", type=int, default=20,
                     help="Font size for tick labels in pixels (default: 20)")
-parser.add_argument("-d", "--downgrade", type=int, default=4,
-                    help="Downgrade factor for resolution (default: 4, use 1 for full resolution)")
+parser.add_argument("-d", "--downgrade", type=int, default=7,
+                    help="Downgrade factor for resolution (default: 7, use 1 for full resolution)")
 args = parser.parse_args()
 
 # --- config ---
-infile  = "/scratch/jiaqu/desi/catalogue/zall_template_car_nosrc_sub_mask.fits"
+infile  = "/home/jiaqu/Thumbstack_DESI/output/z_all_new_mask/stage_template/template_car_nosrc_sub_mask.fits"
+catalog_file = "/scratch/jiaqu/desi/output/zall_mask_no_src_with_cluster/filtered_catalog.csv"
+
 outbase = "/scratch/jiaqu/test_ra0_decpm20"
 dec_min, dec_max = 0, 12.5     # degrees
-ra_center = 140.0              # degrees
-ra_width  = 40                 # degrees total width (RA 120-160)
+ra_min_deg, ra_max_deg = 120.0, 160.0
 
 # --- helpers ---
 def parse_tick_unit(tick_unit):
@@ -32,64 +34,24 @@ def parse_tick_unit(tick_unit):
     except ValueError:
         return tick_unit
 
-def crop_ra_dec_band_wcs_safe(m, ra_center_deg, ra_width_deg, dec_min_deg, dec_max_deg):
-    """Crop a CAR enmap to RA in [ra_center - ra_width/2, ra_center + ra_width/2] (with wrap)
-       and Dec in [dec_min, dec_max], using the actual WCS (no assumptions)."""
-    pos = m.posmap()
-    dec_map = pos[0]
-    ra_map  = pos[1]
-
-    dmin = np.deg2rad(dec_min_deg)
-    dmax = np.deg2rad(dec_max_deg)
-    y_mask = (dec_map[:, 0] >= min(dmin, dmax)) & (dec_map[:, 0] <= max(dmin, dmax))
-    if not np.any(y_mask):
-        raise ValueError("Dec band produced no rows; check dec_min/dec_max.")
-    y0, y1 = np.where(y_mask)[0][[0, -1]]
-    y1 += 1
-
-    rac   = np.deg2rad(ra_center_deg)
-    halfw = np.deg2rad(ra_width_deg / 2.0)
-    y_mid = (y0 + y1) // 2
-    ra_row = ra_map[y_mid]
-    ra_unwrapped = np.unwrap(ra_row - rac) + rac
-
-    ra_min_t = rac - halfw
-    ra_max_t = rac + halfw
-    x_mask = (ra_unwrapped >= ra_min_t) & (ra_unwrapped <= ra_max_t)
-    if not np.any(x_mask):
-        raise ValueError("RA window produced no columns; check ra_center/ra_width.")
-    x0, x1 = np.where(x_mask)[0][[0, -1]]
-    x1 += 1
-
-    return m[y0:y1, x0:x1]
-
 # --- run ---
-m = enmap.read_map(infile)
-m_crop = crop_ra_dec_band_wcs_safe(
-    m, ra_center_deg=ra_center, ra_width_deg=ra_width,
-    dec_min_deg=dec_min, dec_max_deg=dec_max
-)
+# Read only the submap directly from disk (much faster than reading full map)
+box = np.deg2rad([[dec_min, ra_min_deg], [dec_max, ra_max_deg]])
+m_crop = enmap.read_map(infile, box=box)
 
-# Colorbar range (use nice round values)
+# Colorbar range
 cbar_min = -0.002
 cbar_max = 0.0025
 
-# Parse ticks
-ticks_list = [float(x) for x in args.ticks.split(",")]
-if len(ticks_list) == 1:
-    tick_dec, tick_ra = ticks_list[0], ticks_list[0]
-else:
-    tick_dec, tick_ra = ticks_list[0], ticks_list[1]
-
 os.makedirs(os.path.dirname(outbase), exist_ok=True)
 
-# Use enplot with nice settings
+# Plot template map
 plot_kwargs = dict(
     downgrade=args.downgrade,
     colorbar=True,
     color="planck",
     grid=True,
-    grid_width=2,
+    grid_width=1,
     ticks=args.ticks,
     font_size=args.font_size,
     mask=0,
@@ -103,3 +65,23 @@ p = enplot.plot(m_crop, **plot_kwargs)
 enplot.write(outbase, p)
 print(f"Wrote {outbase}.png/.pdf   crop shape={m_crop.shape}")
 print(f"Color range: {cbar_min} to {cbar_max}")
+
+# --- catalogue density map on same geometry ---
+df = pd.read_csv(catalog_file)
+mask_cat = (df['DEC'] >= dec_min) & (df['DEC'] <= dec_max) & (df['RA'] >= ra_min_deg) & (df['RA'] <= ra_max_deg)
+df_crop = df[mask_cat]
+print(f"Galaxies in region: {len(df_crop)}")
+
+# Pixelize catalogue onto the same WCS as the cropped map
+coords = np.deg2rad(np.array([df_crop['DEC'].values, df_crop['RA'].values]))
+density = enmap.zeros(m_crop.shape, m_crop.wcs)
+pix = density.sky2pix(coords).astype(int)
+# Clip to valid pixel range
+valid = (pix[0] >= 0) & (pix[0] < density.shape[0]) & (pix[1] >= 0) & (pix[1] < density.shape[1])
+np.add.at(density, (pix[0][valid], pix[1][valid]), 1)
+
+p_cat = enplot.plot(density, downgrade=args.downgrade, colorbar=True,
+                    grid=True, grid_width=2, ticks=args.ticks,
+                    font_size=args.font_size, color="gray")
+enplot.write(outbase + "_catalog", p_cat)
+print(f"Wrote {outbase}_catalog.png/.pdf with {len(df_crop)} galaxy positions")

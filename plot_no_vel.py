@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import os
 
 # --- config ---
-catalog_file = "/scratch/jiaqu/desi/output/y3_final_renorm/filtered_catalog.csv"
+
+catalog_file = "/scratch/jiaqu/desi/output/zall_mask_no_src_with_cluster/filtered_catalog.csv"
 outbase = "/scratch/jiaqu/test_ra0_decpm20_no_vel"
 dec_min, dec_max = 0, 12.5     # degrees
 ra_center = 140.0              # degrees
