@@ -45,6 +45,7 @@ parser.add_argument("--catalogue",type=str,default="full_catalog_Y3_test_swap.tx
 parser.add_argument("--output-dir", type=str,  default=None,help='Output directory.')
 parser.add_argument("--cmb",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits")
 parser.add_argument("--mask",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits")
+parser.add_argument("--rV", type=float, default=0.65, help='Velocity correlation coefficient (default: 0.65)')
 args = parser.parse_args()
 
 
@@ -85,7 +86,7 @@ def run_analysis(nproc = 1, test=False,
                      nObj=nObj,
                      pathInCatalog=catpath+catname,
                      workDir=catpath,
-                     rV=0.65)
+                     rV=args.rV)
     
     # galcat.readRADecCatalog()
     # galcat.readStellarMassCatalog()

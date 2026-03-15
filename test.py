@@ -40,6 +40,7 @@ parser.add_argument("--savename",type=str,default=None)
 parser.add_argument("--catalogue",type=str,default="full_catalog_Y1_berni_mask.txt")
 parser.add_argument("--cmb",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits")
 parser.add_argument("--mask",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits")
+parser.add_argument("--rV", type=float, default=0.65, help='Velocity correlation coefficient (default: 0.65)')
 parser.add_argument("--apply-cmb-mask2", action='store_false', 
                     help='Apply additional CMB mask 2 for >5sigma outlier removal')
 parser.add_argument("--save-filtered-catalog", action='store_true',
@@ -84,7 +85,7 @@ def run_analysis(nproc = 1, test=False,
                      nObj=nObj,
                      pathInCatalog=catpath+catname,
                      workDir=catpath,
-                     rV=0.65)
+                     rV=args.rV)
     
     # galcat.readRADecCatalog()
     # galcat.readStellarMassCatalog()
