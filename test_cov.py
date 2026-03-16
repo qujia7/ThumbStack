@@ -46,6 +46,8 @@ parser.add_argument("--output-dir", type=str,  default=None,help='Output directo
 parser.add_argument("--cmb",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits")
 parser.add_argument("--mask",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits")
 parser.add_argument("--rV", type=float, default=0.65, help='Velocity correlation coefficient (default: 0.65)')
+parser.add_argument("--nRAp", type=int, default=9, help='Number of aperture radii (default: 9)')
+parser.add_argument("--rApMaxArcmin", type=float, default=6., help='Maximum aperture radius in arcmin (default: 6.0)')
 args = parser.parse_args()
 
 
@@ -110,7 +112,9 @@ def run_analysis(nproc = 1, test=False,
     runEndToEnd=True,
     test=test,
     doStackedMap=do_stacked_map,
-    block_bootstrap=True,nSamples=50000
+    block_bootstrap=True,nSamples=50000,
+    nRAp=args.nRAp,
+    rApMaxArcmin=args.rApMaxArcmin,
 )
 
 

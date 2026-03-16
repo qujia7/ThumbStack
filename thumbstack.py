@@ -30,7 +30,8 @@ class ThumbStack(object):
                 nameLong=None, save=False, nProc=1, filterTypes='diskring',
                 estimatorTypes=['ksz_uniformweight'], equalSignedWeights=False, tLargeMin=None,
                 doStackedMap=False, doMBins=False, doVShuffle=False, doBootstrap=False, cmbNu=150.e9,
-                cmbUnitLatex=r'$\mu$K', workDir='.', test=False,block_bootstrap=False, runEndToEnd=True,nSamples=10000, applyCmbMask2=False):
+                cmbUnitLatex=r'$\mu$K', workDir='.', test=False,block_bootstrap=False, runEndToEnd=True,nSamples=10000, applyCmbMask2=False,
+                nRAp=9, rApMaxArcmin=6.):
     
       self.nProc = nProc
       self.save = save
@@ -56,6 +57,8 @@ class ThumbStack(object):
       self.cmbUnitLatex = cmbUnitLatex
       self.block_bootstrap = block_bootstrap
       self.applyCmbMask2=applyCmbMask2
+      self._nRAp = nRAp
+      self._rApMaxArcmin = rApMaxArcmin
 
       # aperture photometry filters to implement
       # can specify filterTypes as a single string or a list
@@ -284,18 +287,16 @@ class ThumbStack(object):
 
    def loadAPRadii(self):
       # radii to use for AP filter: comoving Mpc/h
-      self.nRAp = 9 #13 
-      # self.nRAp = 13
-      
+      self.nRAp = self._nRAp
+
       # Aperture radii in Mpc/h
       #self.rApMinMpch = 1.
       #self.rApMaxMpch = 5
       #self.RApMpch = np.linspace(self.rApMinMpch, self.rApMaxMpch, self.nRAp)
-      
+
       # Aperture radii in arcmin
       self.rApMinArcmin = 1.  #0.1   #1.  # 1.
-      self.rApMaxArcmin = 6.  #8.5
-      # self.rApMaxArcmin = 8.5
+      self.rApMaxArcmin = self._rApMaxArcmin
       self.RApArcmin = np.linspace(self.rApMinArcmin, self.rApMaxArcmin, self.nRAp)
 
 

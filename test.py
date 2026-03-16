@@ -41,7 +41,9 @@ parser.add_argument("--catalogue",type=str,default="full_catalog_Y1_berni_mask.t
 parser.add_argument("--cmb",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits")
 parser.add_argument("--mask",type=str,default="/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/wide_mask_GAL070_apod_1.50_deg_wExtended.fits")
 parser.add_argument("--rV", type=float, default=0.65, help='Velocity correlation coefficient (default: 0.65)')
-parser.add_argument("--apply-cmb-mask2", action='store_false', 
+parser.add_argument("--nRAp", type=int, default=9, help='Number of aperture radii (default: 9)')
+parser.add_argument("--rApMaxArcmin", type=float, default=6., help='Maximum aperture radius in arcmin (default: 6.0)')
+parser.add_argument("--apply-cmb-mask2", action='store_false',
                     help='Apply additional CMB mask 2 for >5sigma outlier removal')
 parser.add_argument("--save-filtered-catalog", action='store_true',
                     help='Save the filtered catalog as a CSV file after applying all masks')
@@ -110,7 +112,9 @@ def run_analysis(nproc = 1, test=False,
     runEndToEnd=True,
     test=test,
     doStackedMap=do_stacked_map,
-    applyCmbMask2=args.apply_cmb_mask2 
+    applyCmbMask2=args.apply_cmb_mask2,
+    nRAp=args.nRAp,
+    rApMaxArcmin=args.rApMaxArcmin,
 )
 
     # Save the filtered catalog if requested

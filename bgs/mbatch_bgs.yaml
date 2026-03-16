@@ -8,6 +8,8 @@ globals:
   cmb: "/project/rrg-rbond-ac/msyriac/ilc_dr6v3/20230606/hilc_fullRes_TT_17000.fits"
   mask: "/home/jiaqu/Thumbstack_DESI/output/wide_mask_GAL070_apod_1.50_deg_wExtended_no_src_with_cluster.fits"
   rV: 0.64
+  nRAp: 13
+  rApMaxArcmin: 10.75
 
 gitcheck_pkgs:
   - numpy
@@ -26,6 +28,8 @@ stages:
       - mask
       - save-filtered-catalog
       - rV
+      - nRAp
+      - rApMaxArcmin
     parallel:
       nproc: 120
       threads: 16
@@ -41,6 +45,8 @@ stages:
       - random
       - catalogue
       - rV
+      - nRAp
+      - rApMaxArcmin
     parallel:
       nproc: 480
       threads: 16
