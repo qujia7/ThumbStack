@@ -98,6 +98,9 @@ source /home/jiaqu/.bashrc
   - covmat: `output/zbin1_fixed_hod_wide.covmat`; output: `output/zbin1_fixed_hod_v2`; resume=False
 - **zbin3_fixed_hod_v2** (job 1190610): `tight_priors/ksz_mcmc3_v2.yaml`, script `cobaya_fixed_hod_bin3_v2.sh`
   - covmat: `output/zbin3_fixed_hod_wide.covmat`; output: `output/zbin3_fixed_hod_v2`; resume=False
+- **zbin2_fixed_hod_v3** (job 1190630): `tight_priors/ksz_mcmc2_v3.yaml`, script `cobaya_fixed_hod_bin2_v3.sh`
+  - covmat: `output/zbin2_fixed_hod_v2.covmat`; output: `output/zbin2_fixed_hod_v3`; resume=False
+  - Tighter priors: log10_A_rho0 max 4.5→3.8, A_beta max 5.0→4.2, A_beta ref loc 3.50→3.00
 
 ### In Progress / Outstanding Items (from paper TODOs)
 - Figure 4: ~~Check units for axes/colorbar, extend galaxy dot size, add legend~~ **DONE** - Changed to scatter plot of individual galaxy positions (plot_no_vel.py); updated caption
