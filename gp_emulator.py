@@ -1,7 +1,8 @@
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, WhiteKernel, ConstantKernel as C
+from sklearn.gaussian_process.kernels import Matern, WhiteKernel, ConstantKernel as C
 from scipy.stats import qmc
+from scipy.special import gamma as Gamma
 import matplotlib.pyplot as plt
 import pickle
 import os
@@ -235,24 +236,69 @@ print(f"\nTotal parameters: {n_total_params} ({n_hod_params} HOD + {len(gas_para
 print(f"Fixed parameters: A_alpha = {A_ALPHA_FIXED}")
 
 # ============================================================================
-# Generate Latin Hypercube samples
+# zbrent analytic boundary — filter unsafe parameter combinations
 # ============================================================================
 
-n_training_samples = 1500  # Increased from 600 for better 10D coverage
+def zbrent_min_safe_xc(log10_A_rho0, A_beta):
+    """Minimum safe xc_B16 from analytic zbrent failure boundary.
+    Returns inf if A_beta <= 3 (different failure mode)."""
+    if A_beta <= 3.0:
+        return np.inf
+    alpha, gam = 0.88, -0.2
+    J = (1.0/alpha) * Gamma((3.0+gam)/alpha) * Gamma((A_beta-3.0)/alpha) / Gamma((A_beta+gam)/alpha)
+    C_eff = 10**(-0.260)  # calibrated constant
+    A_rho0 = 10**log10_A_rho0
+    xc_min = (200.0/3.0 / (A_rho0 * C_eff * J))**(1.0/3.0)
+    return 1.05 * xc_min  # 5% safety margin
+
+def is_zbrent_safe(combined_params):
+    """Check if parameter combination avoids zbrent failure."""
+    log10_A_rho0 = combined_params[n_hod_params + 0]
+    xc_B16 = combined_params[n_hod_params + 1]
+    A_beta = combined_params[n_hod_params + 2]
+    return xc_B16 >= zbrent_min_safe_xc(log10_A_rho0, A_beta)
+
+# ============================================================================
+# Generate Latin Hypercube samples with zbrent pre-filtering
+# ============================================================================
+
+n_training_samples = 1000
 n_test_samples = 100
 
-print(f"\nGenerating {n_training_samples} training samples in {n_total_params}D space...")
+print(f"\nGenerating {n_training_samples} zbrent-safe training samples in {n_total_params}D space...")
 
+# Over-generate and filter (~77% of parameter space is zbrent-unsafe)
+OVERSAMPLE_FACTOR = 5  # generate 5x to compensate for ~77% rejection
 sampler = qmc.LatinHypercube(d=n_total_params, seed=42)
 
-lhs_samples_raw = sampler.random(n_training_samples)
-training_samples = qmc.scale(lhs_samples_raw, all_bounds[:, 0], all_bounds[:, 1])
+# Training samples
+n_raw_train = int(n_training_samples * OVERSAMPLE_FACTOR)
+lhs_train_raw = sampler.random(n_raw_train)
+train_candidates = qmc.scale(lhs_train_raw, all_bounds[:, 0], all_bounds[:, 1])
+train_safe_mask = np.array([is_zbrent_safe(s) for s in train_candidates])
+training_samples = train_candidates[train_safe_mask][:n_training_samples]
+print(f"  Generated {n_raw_train} raw, {train_safe_mask.sum()} zbrent-safe "
+      f"({train_safe_mask.mean()*100:.0f}%), using {len(training_samples)}")
 
-lhs_test_raw = sampler.random(n_test_samples)
-test_samples = qmc.scale(lhs_test_raw, all_bounds[:, 0], all_bounds[:, 1])
+if len(training_samples) < n_training_samples:
+    print(f"  WARNING: only {len(training_samples)} safe samples, need {n_training_samples}")
+    print(f"  Generating extra batch...")
+    extra_raw = sampler.random(n_raw_train)
+    extra_candidates = qmc.scale(extra_raw, all_bounds[:, 0], all_bounds[:, 1])
+    extra_safe = extra_candidates[np.array([is_zbrent_safe(s) for s in extra_candidates])]
+    training_samples = np.vstack([training_samples, extra_safe])[:n_training_samples]
+    print(f"  Now have {len(training_samples)} training samples")
 
-print(f"Generated {n_training_samples} training samples")
-print(f"Generated {n_test_samples} test samples")
+# Test samples
+n_raw_test = int(n_test_samples * OVERSAMPLE_FACTOR)
+lhs_test_raw = sampler.random(n_raw_test)
+test_candidates = qmc.scale(lhs_test_raw, all_bounds[:, 0], all_bounds[:, 1])
+test_safe_mask = np.array([is_zbrent_safe(s) for s in test_candidates])
+test_samples = test_candidates[test_safe_mask][:n_test_samples]
+print(f"  Test: {test_safe_mask.sum()} zbrent-safe, using {len(test_samples)}")
+n_test_samples = len(test_samples)  # update in case fewer
+
+print(f"Final: {len(training_samples)} training + {n_test_samples} test (all zbrent-safe)")
 
 # ============================================================================
 # CLASS-SZ wrapper function for combined HOD + gas parameters
@@ -484,17 +530,19 @@ for i_ell in range(n_ells):
         y_std = 1.0  # Avoid division by zero for constant columns
     y_train_norm = (y_train - y_mean) / y_std
     
-    # Define kernel
+    # Define kernel — Matern 3/2 with wide length-scale bounds
+    # (some HOD params are near-irrelevant and need large length scales)
     length_scales = np.ones(n_total_params)
-    kernel = C(1.0, (1e-3, 1e3)) * RBF(
+    kernel = C(1.0, (1e-3, 1e3)) * Matern(
         length_scale=length_scales,
-        length_scale_bounds=(1e-2, 1e2)
+        length_scale_bounds=(1e-2, 1e3),
+        nu=1.5
     ) + WhiteKernel(noise_level=1e-5, noise_level_bounds=(1e-10, 1e-1))
-    
+
     # Train GP
     gp = GaussianProcessRegressor(
         kernel=kernel,
-        n_restarts_optimizer=10,
+        n_restarts_optimizer=5,
         normalize_y=False,
         alpha=1e-10
     )
@@ -716,7 +764,7 @@ ax9.set_title(f'Error vs {gas_param_names[gas_param_idx]}')
 ax9.grid(True, alpha=0.3)
 
 plt.tight_layout()
-output_plot = f'/scratch/jiaqu/HOD/gp_emulator_2d_validation_bin{args.bin}_z{z_eff:.3f}_v3.png'
+output_plot = f'/scratch/jiaqu/HOD/gp_emulator_2d_validation_bin{args.bin}_z{z_eff:.3f}_v4.png'
 plt.savefig(output_plot, dpi=150, bbox_inches='tight')
 print(f"Saved validation plot: {output_plot}")
 
@@ -753,10 +801,12 @@ emulator_data = {
         'p95': np.percentile(errors_clean, 95),
         'max': np.max(errors_clean)
     },
-    'training_time_minutes': total_time / 60
+    'training_time_minutes': total_time / 60,
+    'zbrent_filtered': True,
+    'kernel_type': 'matern32',
 }
 
-output_file = f'/scratch/jiaqu/HOD/gp_emulator_2d_bin{args.bin}_z{z_eff:.3f}_v3.pkl'
+output_file = f'/scratch/jiaqu/HOD/gp_emulator_2d_bin{args.bin}_z{z_eff:.3f}_v4.pkl'
 with open(output_file, 'wb') as f:
     pickle.dump(emulator_data, f)
 
