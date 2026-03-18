@@ -238,8 +238,8 @@ print(f"Fixed parameters: A_alpha = {A_ALPHA_FIXED}")
 # Generate Latin Hypercube samples
 # ============================================================================
 
-n_training_samples = 600  # Reduced from 500 since we have 10D instead of 11D
-n_test_samples = 60
+n_training_samples = 1500  # Increased from 600 for better 10D coverage
+n_test_samples = 100
 
 print(f"\nGenerating {n_training_samples} training samples in {n_total_params}D space...")
 
@@ -394,6 +394,30 @@ print(f"Average time per sample: {total_time/n_training_samples:.2f} seconds")
 print(f"Training predictions shape: {training_predictions.shape}")
 
 # ============================================================================
+# Filter to relevant ell range and switch to log-space training
+# ============================================================================
+ELL_MIN_TRAIN = 300   # Below fitting range but with margin
+ELL_MAX_TRAIN = 10000  # Above fitting range but with margin
+
+ell_train_mask = (training_ell >= ELL_MIN_TRAIN) & (training_ell <= ELL_MAX_TRAIN)
+training_ell_full = training_ell.copy()  # Keep for reference
+training_ell = training_ell[ell_train_mask]
+training_predictions = training_predictions[:, ell_train_mask]
+
+print(f"\nFiltered ell to [{ELL_MIN_TRAIN}, {ELL_MAX_TRAIN}]: {len(training_ell)} bins (was {len(training_ell_full)})")
+
+# v3: linear-space training (log-space was tested in v2 and performed worse)
+LOG_FLOOR = 1e-30
+USE_LOG_TRAINING = False
+
+print(f"Training in {'log10' if USE_LOG_TRAINING else 'linear'} space")
+print(f"  Prediction range: [{training_predictions.min():.4e}, {training_predictions.max():.4e}]")
+
+if USE_LOG_TRAINING:
+    training_predictions_log = np.sign(training_predictions) * np.log10(np.abs(training_predictions) + LOG_FLOOR)
+    print(f"  Log prediction range: [{training_predictions_log.min():.4f}, {training_predictions_log.max():.4f}]")
+
+# ============================================================================
 # Run CLASS-SZ for test samples
 # ============================================================================
 
@@ -412,6 +436,12 @@ for i, params in enumerate(test_samples):
 
 test_predictions = np.array(test_predictions)
 print(f"\nTest predictions shape: {test_predictions.shape}")
+
+# Apply same ell filtering to test predictions
+test_predictions = test_predictions[:, ell_train_mask]
+if USE_LOG_TRAINING:
+    test_predictions_log = np.sign(test_predictions) * np.log10(np.abs(test_predictions) + LOG_FLOOR)
+print(f"Filtered test predictions to {test_predictions.shape}")
 
 # ============================================================================
 # Train GP Emulator
@@ -440,13 +470,18 @@ print(f"\nTraining {n_ells} GPs (one per ell bin)...")
 for i_ell in range(n_ells):
     if i_ell % 10 == 0:
         print(f"  Training GP {i_ell+1}/{n_ells} (ell={training_ell[i_ell]:.1f})")
-    
-    # Extract predictions at this ell
-    y_train = training_predictions[:, i_ell]
-    
+
+    # Extract predictions at this ell — use log-space values
+    if USE_LOG_TRAINING:
+        y_train = training_predictions_log[:, i_ell]
+    else:
+        y_train = training_predictions[:, i_ell]
+
     # Normalize predictions
     y_mean = np.mean(y_train)
     y_std = np.std(y_train)
+    if y_std < 1e-30:
+        y_std = 1.0  # Avoid division by zero for constant columns
     y_train_norm = (y_train - y_mean) / y_std
     
     # Define kernel
@@ -485,18 +520,28 @@ print("="*70)
 def predict_with_emulator(combined_params):
     """Predict C_ell using trained GP emulator"""
     params_norm = (combined_params - params_mean) / params_std
-    
+
     predictions = []
     uncertainties = []
-    
+
     for emulator in gp_emulators:
         pred_norm, std_norm = emulator['gp'].predict([params_norm], return_std=True)
-        pred = pred_norm[0] * emulator['y_std'] + emulator['y_mean']
-        std = std_norm[0] * emulator['y_std']
-        
+        pred_log = pred_norm[0] * emulator['y_std'] + emulator['y_mean']
+        std_log = std_norm[0] * emulator['y_std']
+
+        if USE_LOG_TRAINING:
+            # Convert from log10 space back to linear
+            # For positive C_ell, encoded = log10(C_ell), so decode = 10^encoded
+            pred = 10**pred_log
+            # Approximate uncertainty in linear space via error propagation
+            std = pred * std_log * np.log(10)
+        else:
+            pred = pred_log
+            std = std_log
+
         predictions.append(pred)
         uncertainties.append(std)
-    
+
     return np.array(predictions), np.array(uncertainties)
 
 # Test on validation set
@@ -513,16 +558,22 @@ for i, params in enumerate(test_samples):
 test_pred_gp = np.array(test_pred_gp)
 test_pred_std = np.array(test_pred_std)
 
-# Compute errors
-errors = np.abs(test_predictions - test_pred_gp) / np.abs(test_predictions)
+# Compute errors — use safe relative error (avoid div-by-zero)
+denom = np.maximum(np.abs(test_predictions), 1e-20)
+errors = np.abs(test_predictions - test_pred_gp) / denom
+
+# Also filter out points where signal is essentially zero
+signal_mask = np.abs(test_predictions) > 1e-15
+errors_clean = errors[signal_mask]
 
 print(f"\n" + "="*70)
 print("VALIDATION RESULTS")
 print("="*70)
-print(f"Mean relative error:       {np.mean(errors):.4%}")
-print(f"Median relative error:     {np.median(errors):.4%}")
-print(f"95th percentile error:     {np.percentile(errors, 95):.4%}")
-print(f"Max relative error:        {np.max(errors):.4%}")
+print(f"Mean relative error:       {np.mean(errors_clean):.4%}")
+print(f"Median relative error:     {np.median(errors_clean):.4%}")
+print(f"95th percentile error:     {np.percentile(errors_clean, 95):.4%}")
+print(f"Max relative error:        {np.max(errors_clean):.4%}")
+print(f"(Filtered {np.sum(~signal_mask)} zero-signal points from {errors.size} total)")
 
 print(f"\nError statistics by ell:")
 ell_indices = [0, len(training_ell)//4, len(training_ell)//2, 3*len(training_ell)//4, -1]
@@ -665,7 +716,7 @@ ax9.set_title(f'Error vs {gas_param_names[gas_param_idx]}')
 ax9.grid(True, alpha=0.3)
 
 plt.tight_layout()
-output_plot = f'/scratch/jiaqu/HOD/gp_emulator_2d_validation_bin{args.bin}_z{z_eff:.3f}.png'
+output_plot = f'/scratch/jiaqu/HOD/gp_emulator_2d_validation_bin{args.bin}_z{z_eff:.3f}_v3.png'
 plt.savefig(output_plot, dpi=150, bbox_inches='tight')
 print(f"Saved validation plot: {output_plot}")
 
@@ -693,16 +744,19 @@ emulator_data = {
     'z_range': [z0, z1, z2],
     'n_training_samples': n_training_samples,
     'A_alpha_fixed': A_ALPHA_FIXED,  # Store the fixed value
+    'use_log_training': USE_LOG_TRAINING,
+    'log_floor': LOG_FLOOR,
+    'ell_train_range': [ELL_MIN_TRAIN, ELL_MAX_TRAIN],
     'validation_errors': {
-        'mean': np.mean(errors),
-        'median': np.median(errors),
-        'p95': np.percentile(errors, 95),
-        'max': np.max(errors)
+        'mean': np.mean(errors_clean),
+        'median': np.median(errors_clean),
+        'p95': np.percentile(errors_clean, 95),
+        'max': np.max(errors_clean)
     },
     'training_time_minutes': total_time / 60
 }
 
-output_file = f'/scratch/jiaqu/HOD/gp_emulator_2d_bin{args.bin}_z{z_eff:.3f}.pkl'
+output_file = f'/scratch/jiaqu/HOD/gp_emulator_2d_bin{args.bin}_z{z_eff:.3f}_v3.pkl'
 with open(output_file, 'wb') as f:
     pickle.dump(emulator_data, f)
 
@@ -723,9 +777,10 @@ print(f"Fixed parameters: A_alpha = {A_ALPHA_FIXED}")
 print(f"Number of ell bins: {len(training_ell)}")
 print(f"ell range: {training_ell[0]:.1f} - {training_ell[-1]:.1f}")
 print(f"Training time: {total_time/60:.1f} minutes")
+print(f"Log-space training: {USE_LOG_TRAINING}")
 print(f"\nValidation Performance:")
-print(f"  Median error: {np.median(errors):.4%}")
-print(f"  95th percentile: {np.percentile(errors, 95):.4%}")
+print(f"  Median error: {np.median(errors_clean):.4%}")
+print(f"  95th percentile: {np.percentile(errors_clean, 95):.4%}")
 print(f"\nParameter ranges:")
 print("HOD (6 parameters):")
 for name, bound in zip(hod_param_names, hod_bounds):
