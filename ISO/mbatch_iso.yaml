@@ -6,7 +6,7 @@ globals:
   savename: "ISO"
   random: False
   save-filtered-catalog: True
-  catalogue: "full_catalog_Y3_no_src_with_cluster_mask.txt" #path to catalogue
+  catalogue: "full_catalog_Y1_renorm_ISO.txt" #path to catalogue
   cmb: "/home/r/rbond/jiaqu/projects/SO/ISO/bossn_f90_f150_i1_nilc_coadd_blackbody_temperature_ellmin_100_ellmax_4000_beam_2arcmin_mask_i1_20250704.fits" #path to CMB map
   mask: "/home/r/rbond/jiaqu/projects/SO/ISO/mask_i1_20250704.fits" #path to mask
 
