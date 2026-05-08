@@ -1,0 +1,59 @@
+# SPLIT TEST
+root_dir: output/
+# Variables that are global to all your stages
+# and their values
+globals:
+  savename: "ISO"
+  random: False
+  save-filtered-catalog: True
+  catalogue: "full_catalog_Y3_no_src_with_cluster_mask.txt" #path to catalogue
+  cmb: "/home/r/rbond/jiaqu/projects/SO/ISO/bossn_f90_f150_i1_nilc_coadd_blackbody_temperature_ellmin_100_ellmax_4000_beam_2arcmin_mask_i1_20250704.fits" #path to CMB map
+  mask: "/home/r/rbond/jiaqu/projects/SO/ISO/mask_i1_20250704.fits" #path to mask
+
+
+gitcheck_pkgs:
+  - numpy
+  - scipy
+
+
+
+stages:
+
+  stage_profile:
+    script: test.py
+    exec: python
+    globals:
+      - savename
+      - random
+      - catalogue
+      - cmb
+      - mask
+      - save-filtered-catalog
+    parallel:
+      nproc: 120       # 15 nodes * 12 tasks per node
+      threads: 16     # 16 CPUs per task
+      walltime: 00:15:00
+
+  stage_bootstrap:
+    script: test_cov.py
+    exec: python
+    depends:
+      - stage_profile
+    globals:
+      - savename
+      - random
+      - catalogue
+      - mask
+    parallel:
+      nproc: 480       # 30 nodes * 16 tasks per node
+      threads: 16     # 16 CPUs per task
+      walltime: 00:15:00
+
+
+
+
+
+
+
+
+
