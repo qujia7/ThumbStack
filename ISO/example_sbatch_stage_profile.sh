@@ -23,4 +23,7 @@ source /home/r/rbond/jiaqu/.bashrc
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-srun python test.py --savename=ISO --catalogue=full_catalog_Y1_ISO.txt --cmb=/home/r/rbond/jiaqu/projects/SO/ISO/bossn_f90_f150_i1_nilc_coadd_blackbody_temperature_ellmin_100_ellmax_4000_beam_2arcmin_mask_i1_20250704.fits --mask=/home/r/rbond/jiaqu/projects/SO/ISO/mask_i1_20250704.fits --output-dir /gpfs/fs1/home/r/rbond/jiaqu/Thumbstack_DESI/output/ISO/stage_profile
+# Run from the repo root so test.py resolves; this file lives in ISO/.
+cd "$SLURM_SUBMIT_DIR/.."
+
+srun python test.py --savename=ISO --catalogue=full_catalog_Y1_renorm_ISO.txt --cmb=/home/r/rbond/jiaqu/projects/SO/ISO/bossn_f90_f150_i1_nilc_coadd_blackbody_temperature_ellmin_100_ellmax_4000_beam_2arcmin_mask_i1_20250704.fits --mask=/home/r/rbond/jiaqu/projects/SO/ISO/mask_i1_20250704.fits --output-dir /gpfs/fs1/home/r/rbond/jiaqu/Thumbstack_DESI/output/ISO/stage_profile
