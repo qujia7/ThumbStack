@@ -22,8 +22,6 @@ from pixell import enmap
 main_directory     = '/project/rrg-rbond-ac/jiaqu/DESI/catalogs/Y1/LSS/iron/LSScats/v1.2/unblinded/'
 post_rec_directory = 'desipipe/baseline_2pt/recon_recsym/'
 
-bins_directory     = '/project/rrg-rbond-ac/jiaqu/DESI_LRG_legacy/dr9_lrg_pzbins.fits'
-
 # ISO footprint mask used to extract the catalogue footprint.
 mask_path          = '/home/r/rbond/jiaqu/projects/SO/ISO/mask_i1_20250704.fits'
 
@@ -57,13 +55,6 @@ print(f"  NGC pre-rec : {len(pre_rec_NGC)}")
 print(f"  NGC post-rec: {len(post_rec_NGC)}")
 print(f"  SGC pre-rec : {len(pre_rec_SGC)}")
 print(f"  SGC post-rec: {len(post_rec_SGC)}")
-
-# DESI Legacy photo-z bins (adds redshift bin info; same merge as DA2 script).
-dat_bins = Table.read(bins_directory, format='fits')
-bins     = dat_bins.to_pandas()
-
-pre_rec_NGC = pd.merge(pre_rec_NGC, bins, on=["TARGETID", "RA", "DEC"])
-pre_rec_SGC = pd.merge(pre_rec_SGC, bins, on=["TARGETID", "RA", "DEC"])
 
 pre_rec_NGC["GC"] = "NGC"
 pre_rec_SGC["GC"] = "SGC"
